@@ -1,0 +1,54 @@
+id="view-settle" class="hidden view-panel space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-extrabold text-on-surface tracking-tight">Settle & Reconcile</h1>
+                <p class="text-xs text-on-surface-variant mt-0.5">Automated UPI payment station with real-time status polling</p>
+            </div>
+            <button onclick="openDebtMatrixModal()" class="qw-btn qw-btn-secondary text-xs">
+                <span class="material-symbols-outlined text-[16px]">hub</span>
+                <span>Debt Simplification Matrix</span>
+            </button>
+        </div>
+
+        <!-- Success Alert Banner -->
+        <div id="settleSuccessAlert" class="hidden p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs font-semibold flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-[18px]">verified</span>
+            <span id="settleSuccessMsg"></span>
+        </div>
+
+        <!-- Settle Up Master Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Column: Peer Debt Selection & Payment Details (5 cols) -->
+            <div class="lg:col-span-5 qw-card p-5 sm:p-6 space-y-5">
+                
+                <!-- Owe / Owed Tabs -->
+                <div class="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-container border border-outline-variant">
+                    <button type="button" id="tabBtnOwe" onclick="switchSettleTab('owe')" class="py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-rose-500 shadow-xs flex items-center justify-center gap-1.5">
+                        <span>You Owe</span>
+                        <span id="countYouOwe" class="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/10 text-rose-500 font-mono font-bold">0</span>
+                    </button>
+                    <button type="button" id="tabBtnOwed" onclick="switchSettleTab('owed')" class="py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1.5">
+                        <span>Owes You</span>
+                        <span id="countOwesYou" class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/10 text-emerald-500 font-mono font-bold">0</span>
+                    </button>
+                </div>
+
+                <!-- Peers List Container -->
+                <div id="tabContentOwe" class="space-y-2">
+                    <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Select Peer to Settle</label>
+                    <div id="settlePeerCardsContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div id="tabContentOwed" class="hidden space-y-2">
+                    <p class="text-xs text-on-surface-variant">Remind peers who currently have pending shares payable to you:</p>
+                    <div id="settleOwedCardsContainer" class="space-y-2"></div>
+                </div>
+
+                <!-- Settlement Input Form -->
+                <div class="space-y-4 pt-3 border-t border-outline-variant">
+                    <!-- Receiver Banner -->
+                    <div class="p-3.5 rounded-2xl bg-surface-container flex items-center just

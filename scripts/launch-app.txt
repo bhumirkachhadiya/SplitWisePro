@@ -1,0 +1,22 @@
+function launchApp() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('appWorkspace').classList.remove('hidden');
+
+            // Reveal Chat option in sidebar and floating launcher ONLY after successful login
+            const chatNav = document.getElementById('sidebarChatNav');
+            if (chatNav) chatNav.classList.remove('hidden');
+            const chatLauncher = document.getElementById('chatbotLauncher');
+            if (chatLauncher) chatLauncher.classList.remove('hidden');
+
+            updateUserProfileUI();
+            await refreshAllData();
+            await updateChatUnreadBadge();
+            navigateTo('dashboard');
+            checkUrlNavigationParams();
+        }
+
+        function updateUserProfileUI() {
+            if (!currentUser) return;
+            const navName = document.getElementById('navUserName');
+            if (navName) navName.innerText = currentUser.name;
+            const navEmail = docu

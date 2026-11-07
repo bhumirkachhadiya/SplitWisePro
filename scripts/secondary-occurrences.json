@@ -1,0 +1,57 @@
+{
+  "build-quantum-ui.js": [
+    {
+      "line": 202,
+      "text": "<span class=\"material-symbols-outlined text-[16px] text-indigo-400\">payments</span>"
+    },
+    {
+      "line": 630,
+      "text": "\"secondary-container\": \"#4f46e5\","
+    },
+    {
+      "line": 631,
+      "text": "\"on-secondary\": \"#ffffff\","
+    }
+  ],
+  "navigation-shell.js": [
+    {
+      "line": 123,
+      "text": "<span class=\"material-symbols-outlined text-[19px] text-indigo-500 flex-shrink-0\">mail</span>"
+    }
+  ],
+  "views-part1.js": [
+    {
+      "line": 91,
+      "text": "<span class=\"text-xs font-bold uppercase tracking-wider text-indigo-500\">Monthly Spend</span>"
+    },
+    {
+      "line": 92,
+      "text": "<button onclick=\"navigateTo('analytics')\" class=\"text-[11px] font-bold text-indigo-500 hover:underline\">Insights &rarr;<"
+    },
+    {
+      "line": 95,
+      "text": "<div id=\"dashStatMonth\" class=\"text-2xl sm:text-3xl font-extrabold tabular-nums tracking-tight text-indigo-400\">₹0.00</d"
+    },
+    {
+      "line": 98,
+      "text": "<span class=\"material-symbols-outlined text-[14px] text-indigo-500\">calendar_month</span>"
+    },
+    {
+      "line": 163,
+      "text": "<div class=\"flex items-center gap-2 text-indigo-400\">"
+    }
+  ],
+  "views-part2.js": [
+    {
+      "line": 396,
+      "text": "<div id=\"analyticsTopExpense\" class=\"text-2xl font-bold font-mono text-indigo-400\">₹0.00</div>"
+    }
+  ],
+  "modals.js": [],
+  "auth-screen.js": [
+    {
+      "line": 19,
+      "text": "<div class=\"absolute -left-20 bottom-10 w-80 h-80 rounded-full bg-indigo-500/15 blur-[100px] pointer-events-none\"></div>"
+    }
+  ]
+}

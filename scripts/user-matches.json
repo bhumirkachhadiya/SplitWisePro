@@ -1,0 +1,37 @@
+[
+  {
+    "index": 219007,
+    "text": "currentUser = null;",
+    "context": "'http://localhost:5000/api';\n        \n        let currentUser = null;\n        let allUsers = [];\n        let allGroups = [];\n        let allExpenses = [];\n        let myFriends = [];\n        let myFriendRequests = { incoming: [], outgoing: [] };\n    "
+  },
+  {
+    "index": 237811,
+    "text": "currentUser = JSON.parse(storedUser);",
+    "context": "User) {\n                try {\n                    currentUser = JSON.parse(storedUser);\n                    launchApp();\n                } catch(e) {\n                    sessionStorage.removeItem('splitease_user');\n                }\n            }\n\n  "
+  },
+  {
+    "index": 250973,
+    "text": "currentUser = data.user;",
+    "context": "eturn;\n                    }\n\n                    currentUser = data.user;\n                    sessionStorage.setItem('splitease_user', JSON.stringify(currentUser));\n                    localStorage.setItem('splitease_user', JSON.stringify(currentUse"
+  },
+  {
+    "index": 253544,
+    "text": "currentUser = data.user;",
+    "context": "erified and User Account Created!\n                currentUser = data.user;\n                sessionStorage.setItem('splitease_user', JSON.stringify(currentUser));\n                localStorage.setItem('splitease_user', JSON.stringify(currentUser));\n\n  "
+  },
+  {
+    "index": 255914,
+    "text": "currentUser = null;",
+    "context": "Storage.removeItem('splitease_user');\n            currentUser = null;\n\n            // Immediately hide workspace and show auth screen\n            document.getElementById('appWorkspace').classList.add('hidden');\n            document.getElementById('au"
+  },
+  {
+    "index": 333222,
+    "text": "currentUser = data.user;",
+    "context": "       return;\n                }\n\n                currentUser = data.user;\n                sessionStorage.setItem('splitease_user', JSON.stringify(currentUser));\n                updateUserProfileUI();\n                showProfileAlert('✓ Profile & sec"
+  },
+  {
+    "index": 538467,
+    "text": "currentUser = JSON.parse(savedUser);",
+    "context": "User) {\n                try {\n                    currentUser = JSON.parse(savedUser);\n                    launchApp();\n                } catch(e) {\n                    sessionStorage.removeItem('splitease_user');\n                    handleLogout();\n"
+  }
+]

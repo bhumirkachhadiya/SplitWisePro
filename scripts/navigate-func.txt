@@ -1,0 +1,56 @@
+function navigateTo(viewName) {
+            if (!currentUser) {
+                handleLogout();
+                return;
+            }
+
+            if (viewName !== 'settle' && typeof upiStatusPollInterval !== 'undefined' && upiStatusPollInterval) {
+                clearInterval(upiStatusPollInterval);
+                upiStatusPollInterval = null;
+            }
+
+            if (typeof closeMobileSidebar === 'function') closeMobileSidebar();
+
+            document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'font-semibold');
+                el.classList.add('text-on-surface-variant', 'font-medium');
+            });
+
+            const targetView = document.getElementById(`view-${viewName}`);
+            const targetNav = document.querySelector(`[data-nav="${viewName}"]`);
+
+            if (targetView) targetView.classList.remove('hidden');
+            if (targetNav) {
+                targetNav.classList.add('bg-secondary-container', 'text-on-secondary-container', 'font-semibold');
+                targetNav.classList.remove('text-on-surface-variant', 'font-medium');
+            }
+
+            // Sync Mobile Bottom Navigation active states
+            document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+                btn.classList.remove('text-primary', 'font-bold');
+                btn.classList.add('text-on-surface-variant', 'font-medium');
+            });
+            const targetMobileNav = document.querySelector(`[data-mobile-nav="${viewName}"]`);
+            if (targetMobileNav) {
+                targetMobileNav.classList.add('text-primary', 'font-bold');
+                targetMobileNav.classList.remove('text-on-surface-variant', 'font-medium');
+            }
+
+            if (viewName === 'dashboard') {
+                renderDashboardCharts();
+            } else if (viewName === 'analytics') {
+                renderAnalyticsCharts();
+            } else if (viewName === 'activity') {
+                loadActivityFeed();
+            } else if (viewName === 'chat') {
+                loadChatConversations();
+            } else if (viewName === 'friends') {
+                loadFriendsData();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // -------------------------------------------------------------
+        // VIEW:

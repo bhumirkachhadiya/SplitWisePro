@@ -1,0 +1,17 @@
+   [bU, bC, bB].forEach(b => {
+                if (b) b.className = 'pm-tab py-2.5 px-2 sm:px-3 rounded-xl bg-surface-container-low text-on-surface-variant hover:bg-surface-container text-[11px] sm:text-xs font-semibold transition-all flex items-center justify-center gap-1 sm:gap-1.5 min-h-[42px] border border-outline-variant';
+            });
+
+            if (normMethod === 'UPI') {
+                if (bU) bU.className = 'pm-tab active py-2.5 px-2 sm:px-3 rounded-xl bg-primary text-white text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm min-h-[42px] border border-primary';
+                if (manualBtn) manualBtn.classList.add('hidden');
+                if (nStation) nStation.classList.add('hidden');
+                if (sCard) sCard.classList.add('hidden');
+                if (fCard) fCard.classList.add('hidden');
+                if (pStation) pStation.classList.remove('hidden');
+
+                // Generate fresh backend transaction and QR code for UPI
+                initUpiPaymentRequest();
+            } else {
+                if (normMethod === 'CASH' && bC) bC.className = 'pm-tab active py-2.5 px-2 sm:px-3 rounded-xl bg-primary text-white text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm min-h-[42px] border border-primary';
+                if (normMethod === 'BANK' && bB) bB.className = 'pm-tab active py-2.5 px-2 sm:px-3 rounded-xl bg-primary text-white te

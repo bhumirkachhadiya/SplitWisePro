@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#f7f9fb;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-container": "#1b2e3e", "on-error": "#ffffff", "on-background": "#191c1e", "surface-container-lowest": "#ffffff", "on-secondary-container": "#007150", "primary-container": "#16a878", "outline-variant": "#bccac0", "on-surface-variant": "#3d4a42", "error-container": "#ffdad6", "tertiary-container": "#8296a8", "on-error-container": "#93000a", "on-primary": "#ffffff", "on-tertiary-fixed-variant": "#354959", "surface-bright": "#f7f9fb", "inverse-surface": "#2d3133", "on-secondary-fixed": "#002115", "on-surface": "#191c1e", "inverse-on-surface": "#eff1f3", "tertiary": "#4d6171", "tertiary-fixed": "#d0e5f9", "primary": "#006c4b", "error": "#ba1a1a", "primary-fixed": "#7df9c3", "on-tertiary-fixed": "#081d2c", "surface-container": "#eceef0", "on-secondary-fixed-variant": "#005139", "surface-container-highest": "#e0e3e5", "secondary-container": "#91f3c7", "secondary-fixed-dim": "#78d9af", "on-secondary": "#ffffff", "surface-container-low": "#f2f4f6", "secondary": "#006c4c", "surface": "#f7f9fb", "surface-variant": "#e0e3e5", "background": "#f7f9fb", "on-primary-fixed-variant": "#005138", "on-tertiary": "#ffffff", "surface-container-high": "#e6e8ea", "secondary-fixed": "#94f6ca", "tertiary-fixed-dim": "#b4c9dc", "outline": "#6d7a72", "on-primary-container": "#003422", "on-primary-fixed": "#002114", "surface-tint": "#006c4b", "surface-dim": "#d8dadc", "primary-fixed-dim": "#5edda8", "inverse-primary": "#5edda8" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-md": "0.75rem", "gutter": "1.5rem", "gutter-mobile": "0.75rem", "margin": "2rem", "space-sm": "0.5rem", "space-xl": "1.5rem", "space-xs": "0.25rem", "margin-mobile": "1rem", "space-lg": "1rem" }, "fontFamily": { "headline-sm": ["Inter"], "body-lg": ["Inter"], "display-lg-mobile": ["Inter"], "body-sm": ["Inter"], "numeric-md": ["Inter"], "headline-lg": ["Inter"], "body-md": ["Inter"], "numeric-lg": ["Inter"], "display-lg": ["Inter"], "label-sm": ["Inter"], "title-lg": ["Inter"], "headline-md": ["Inter"], "headline-lg-mobile": ["Inter"], "label-md": ["Inter"], "title-md": ["Inter"], "numeric-hero": ["Inter"] }, "fontSize": { "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}], "display-lg-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "700"}], "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}], "numeric-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}], "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}], "numeric-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700"}], "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}], "title-lg": ["18px", {"lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "headline-lg-mobile": ["26px", {"lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700"}], "label-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}], "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600"}], "numeric-hero": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased flex flex-col min-h-screen selection:bg-secondary-container selection:text-on-secondary-container"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(23,43,58,0.04)]"><div class="h-16 px-space-lg flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><img alt="SplitEase App Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1VUb2UHsXA9ug2240puykOUvIZD73Zxbajk6vYmDCwWG-MQqB6c4dj7cp3SHRP3BYCQLuJuHddL4l2sIc3FzunwzATnkzX-jqD6vKEwlsq6QbO7-kiot880doO54hhbFL8MgCsKUr4bKMhsEi_C99hjcxsCt7O_GwWMctWIYFpkZTIxQHG3gIUcDdTO-02aY6m8CT7hi_I0w6SFO6Aqg5C5i_whpT9CEOLOf3H2ssxT9g"/><div class="flex flex-col min-w-0"><span class="font-title-lg text-title-lg text-primary leading-tight tracking-tight">SplitEase</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate">Dashboard</span></div></div><div class="flex items-center gap-space-xs"><button aria-label="Notifications" class="relative w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface"></span></button><a aria-label="User Profile" class="w-11 h-11 flex items-center justify-center rounded-full transition-transform active:scale-95" data-path="profile" href="#"><img alt="Profile" class="w-8 h-8 rounded-full object-cover shadow-[0_1px_3px_rgba(23,43,58,0.12)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_-w3K--wX0VJ_HWoFY9w7jhiXhuanofSUJq8T0qv_dqhLduHWNEQkIme62Z0mYv95vkhFvj79tKnAxZETiqCkrUNiEgBZkYjYKq34W159cc2OY6B6XNHePKNnIDeK_C09axjc4o5_Wlz8Usyz7WQNqQXhg8NjtlUsGoFbs4O8y-17oq3WvpbXlK6WYQeKqjLH5TKADBJapwwgvwkj83h4Odsu9qv_QUuSzG4yvX8t"/></a></div></div></header><main class="flex-1 w-full bg-surface pt-16 pb-28"><div class="flex flex-col w-full">
+<!-- Subtle Ambient Glow Canvas Decor -->
+<div class="relative w-full px-space-md py-space-sm space-y-space-xl">
+<!-- Greeting & Quick Actions Section -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div>
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight">Good evening, Alex!</span>
+<span class="text-xl animate-pulse">✨</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Here's your expense overview.</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container shadow-sm">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">insights</span>
+</div>
+</div>
+<!-- Quick Action Buttons Row -->
+<div class="grid grid-cols-2 gap-space-sm">
+<button class="flex items-center justify-center gap-space-xs py-2.5 px-space-md rounded-xl bg-primary-container text-on-primary font-title-md text-title-md shadow-[0_4px_14px_rgba(22,168,120,0.35)] active:scale-[0.98] transition-all hover:bg-primary" id="addExpenseBtn">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>Add Expense</span>
+</button>
+<button class="flex items-center justify-center gap-space-xs py-2.5 px-space-md rounded-xl bg-surface-container-high text-on-surface font-title-md text-title-md shadow-sm active:scale-[0.98] transition-all hover:bg-surface-container-highest" id="createGroupBtn">
+<span class="material-symbols-outlined text-[20px] text-primary">group_add</span>
+<span>Create Group</span>
+</button>
+</div>
+</div>
+<!-- Financial Summary Bento Grid (2x2) -->
+<div class="grid grid-cols-2 gap-space-sm">
+<!-- Card 1: Total You Owe -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_3px_rgba(23,43,58,0.06)] flex flex-col justify-between space-y-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">You Owe</span>
+<span class="w-6 h-6 rounded-full bg-error-container text-on-error-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">arrow_outward</span>
+</span>
+</div>
+<div>
+<div class="font-numeric-lg text-numeric-lg text-error tabular-nums tracking-tight">₹2,450</div>
+<div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full bg-error-container/60 text-on-error-container font-label-sm text-label-sm">
+<span>Across 4 friends</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Total You're Owed -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_3px_rgba(23,43,58,0.06)] flex flex-col justify-between space-y-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">You're Owed</span>
+<span class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+</span>
+</div>
+<div>
+<div class="font-numeric-lg text-numeric-lg text-primary tabular-nums tracking-tight">₹5,800</div>
+<div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full bg-secondary-container/70 text-on-secondary-container font-label-sm text-label-sm">
+<span>From 6 friends</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Net Balance (Highlighted Hero card) -->
+<div class="bg-gradient-to-br from-primary-container to-primary text-on-primary p-space-md rounded-xl shadow-[0_8px_20px_-4px_rgba(22,168,120,0.35)] flex flex-col justify-between space-y-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-primary/80 uppercase tracking-wider">Net Balance</span>
+<span class="material-symbols-outlined text-[18px] text-on-primary">wallet</span>
+</div>
+<div>
+<div class="font-numeric-hero text-[30px] leading-[36px] text-on-primary tabular-nums font-bold tracking-tight">+₹3,350</div>
+<div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full bg-surface-container-lowest/20 backdrop-blur-md text-on-primary font-label-sm text-[10px] leading-tight font-medium">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>
+<span class="truncate">Owed more than owe</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Monthly Expenses -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-[0_1px_3px_rgba(23,43,58,0.06)] flex flex-col justify-between space-y-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">This Month</span>
+<span class="w-6 h-6 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+</span>
+</div>
+<div>
+<div class="font-numeric-lg text-numeric-lg text-on-surface tabular-nums tracking-tight">₹12,800</div>
+<div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-full bg-error-container/40 text-on-error-container font-label-sm text-label-sm font-medium">
+<span class="material-symbols-outlined text-[12px]">north_east</span>
+<span>+12% vs last mo</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Settle Carousel / Switch Tabs -->
+<div class="space-y-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="font-title-lg text-title-lg text-on-surface">Balances Breakdown</span>
+<span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-surface-container-high font-label-sm text-label-sm text-on-surface-variant">Active</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-semibold cursor-pointer">View All</span>
+</div>
+<!-- Segmented Toggle for Settle Tabs -->
+<div class="flex p-1 rounded-xl bg-surface-container space-x-1" role="tablist">
+<button aria-selected="true" class="flex-1 py-1.5 px-space-xs text-center rounded-lg bg-surface-container-lowest shadow-sm font-label-md text-label-md text-on-surface transition-all flex items-center justify-center gap-1" id="tabOwe" role="tab">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span>You Owe (3)</span>
+</button>
+<button aria-selected="false" class="flex-1 py-1.5 px-space-xs text-center rounded-lg text-on-surface-variant font-label-md text-label-md transition-all flex items-center justify-center gap-1" id="tabOwed" role="tab">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span>Owes You (3)</span>
+</button>
+</div>
+<!-- People You Owe Container -->
+<div class="space-y-space-xs" id="panelOwe">
+<!-- Person 1 -->
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)]">
+<div class="flex items-center gap-space-md min-w-0">
+<img class="w-10 h-10 rounded-full object-cover flex-shrink-0" data-alt="Close up photographic portrait of Rahul, a stylish smiling South Asian young professional outdoors in natural sunlight with crisp urban background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEDt40j1B9SJYr4mmp0PyHW770ScNweqdl7DcWNiGjJIGI8TuKUqhf7HtMZeV7KGbJRKyuhJIifwqI2LFvDVFo974KP_aZkF-FegfKnpnXax-w2ZL1Pt02wMoeyUnBxo7BQG6ui6J5XRFFAEUeyKYwQ0XyIdtCzCtZyc0yTzgoNskEoRtwFjueCbawLX9n2FxY7v6pPHDGd1db0-QW6ihRuXtMJ2Ixj4Bc9OLBng1u"/>
+<div class="min-w-0">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Rahul Sharma</h4>
+<p class="font-body-sm text-body-sm text-error font-medium tabular-nums">You owe ₹850</p>
+</div>
+</div>
+<button class="px-space-md py-1.5 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md hover:bg-error hover:text-on-error active:scale-95 transition-all flex items-center gap-1" onclick="handleSettle('Rahul Sharma', '850')">
+<span>Settle</span>
+<span class="material-symbols-outlined text-[14px]">payments</span>
+</button>
+</div>
+<!-- Person 2 -->
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)]">
+<div class="flex items-center gap-space-md min-w-0">
+<img class="w-10 h-10 rounded-full object-cover flex-shrink-0" data-alt="Charming warm photographic portrait of Priya, a young creative Indian woman with eyeglasses smiling brightly against soft daylight interior." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCy1ajk2IECncRI9M2QHvSKVr1AMuQcg-e69SjShgO62TRdGr1NHBli1kVektAgNoaHCW29sn3CUWGeN5aNDz3yOHNIr7sfIizS6Jz2xedRZbJ0ljaPafN72UXKUTdyQJJ5Iy1TdGrfiVEjLNoQSV05udElxsCWiNfeFl1QayIpQvnakZqjwm-dzLPngNkP4JTsaMC91mDHoguD2RwpPKxwRu3fumc4ezkgo8dtqkG1"/>
+<div class="min-w-0">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Priya Patel</h4>
+<p class="font-body-sm text-body-sm text-error font-medium tabular-nums">You owe ₹600</p>
+</div>
+</div>
+<button class="px-space-md py-1.5 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md hover:bg-error hover:text-on-error active:scale-95 transition-all flex items-center gap-1" onclick="handleSettle('Priya Patel', '600')">
+<span>Settle</span>
+<span class="material-symbols-outlined text-[14px]">payments</span>
+</button>
+</div>
+<!-- Person 3 -->
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)]">
+<div class="flex items-center gap-space-md min-w-0">
+<img class="w-10 h-10 rounded-full object-cover flex-shrink-0" data-alt="Modern candid street photography portrait of Aman, a cheerful young man wearing a denim shirt against a soft blurred cafe background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAf29Df6qU6-a-7xRMeiSx0UayFSc5CxacEJt4bP5tzSot_wOAE-zqxsJjxg8OBw_hbOdpKy_Rb36O8-cK4-yzSqIx-iCuwF9zaI9iQTUFWunG9lnz8uWrixmFAepPzXN0dm9FqqjIAIGEeZXPGE1NmwTcJUvB1bc7clcCr3ys3lz1t-k-epqW8uXeLLbZiUGApuzef5k-pYE92ROq5pzIBw-g-ifmv4m2EDwB6HmpN"/>
+<div class="min-w-0">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Aman Verma</h4>
+<p class="font-body-sm text-body-sm text-error font-medium tabular-nums">You owe ₹1,000</p>
+</div>
+</div>
+<button class="px-space-md py-1.5 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md hover:bg-error hover:text-on-error active:scale-95 transition-all flex items-center gap-1" onclick="handleSettle('Aman Verma', '1,000')">
+<span>Settle</span>
+<span class="material-symbols-outlined text-[14px]">payments</span>
+</button>
+</div>
+</div>
+<!-- People Who Owe You Container (Hidden toggleable initially or viewable) -->
+<div class="space-y-space-xs hidden" id="panelOwed">
+<!-- Person A -->
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)]">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container font-title-md text-title-md flex items-center justify-center flex-shrink-0 font-bold">
+              N
+            </div>
+<div class="min-w-0">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Neha Gupta</h4>
+<p class="font-body-sm text-body-sm text-primary font-semibold tabular-nums">Owes you ₹1,500</p>
+</div>
+</div>
+<button class="px-space-md py-1.5 rounded-lg bg-secondary-container/80 text-on-secondary-container font-label-md text-label-md hover:bg-secondary-container active:scale-95 transition-all flex items-center gap-1" onclick="handleRemind('Neha Gupta')">
+<span class="material-symbols-outlined text-[14px]">send</span>
+<span>Remind</span>
+</button>
+</div>
+<!-- Person B -->
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)]">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-10 h-10 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-title-md text-title-md flex items-center justify-center flex-shrink-0 font-bold">
+              K
+            </div>
+<div class="min-w-0">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Karan Malhotra</h4>
+<p class="font-body-sm text-body-sm text-primary font-semibold tabular-nums">Owes you ₹2,300</p>
+</div>
+</div>
+<button class="px-space-md py-1.5 rounded-lg bg-secondary-container/80 text-on-secondary-container font-label-md text-label-md hover:bg-secondary-container active:scale-95 transition-all flex items-center gap-1" onclick="handleRemind('Karan Malhotra')">
+<span class="material-symbols-outlined text-[14px]">send</span>
+<span>Remind</span>
+</button>
+</div>
+<!-- Person C -->
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)]">
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container font-title-md text-title-md flex items-center justify-center flex-shrink-0 font-bold">
+              R
+            </div>
+<div class="min-w-0">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Riya Sen</h4>
+<p class="font-body-sm text-body-sm text-primary font-semibold tabular-nums">Owes you ₹2,000</p>
+</div>
+</div>
+<button class="px-space-md py-1.5 rounded-lg bg-secondary-container/80 text-on-secondary-container font-label-md text-label-md hover:bg-secondary-container active:scale-95 transition-all flex items-center gap-1" onclick="handleRemind('Riya Sen')">
+<span class="material-symbols-outlined text-[14px]">send</span>
+<span>Remind</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Recent Activity Feed -->
+<div class="space-y-space-md">
+<div class="flex items-center justify-between">
+<h3 class="font-title-lg text-title-lg text-on-surface">Recent Activity</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Last 7 days</span>
+</div>
+<div class="space-y-space-xs">
+<!-- Activity Item 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)] flex items-center gap-space-md transition-transform active:scale-[0.99]">
+<div class="w-11 h-11 rounded-xl bg-secondary-container/50 text-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">restaurant</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-2">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Dinner at The Grand Restaurant</h4>
+<span class="font-numeric-md text-numeric-md text-on-surface tabular-nums">₹2,400</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm mt-0.5">
+<span class="truncate">Paid by Alex • <span class="text-on-surface-variant/70">Today</span></span>
+<span class="font-label-sm text-label-sm font-semibold text-primary tabular-nums">Your share: ₹600</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)] flex items-center gap-space-md transition-transform active:scale-[0.99]">
+<div class="w-11 h-11 rounded-xl bg-tertiary-fixed-dim/40 text-on-tertiary-fixed-variant flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">movie</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-2">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Movie Night</h4>
+<span class="font-numeric-md text-numeric-md text-on-surface tabular-nums">₹1,200</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm mt-0.5">
+<span class="truncate">Paid by Rahul • <span class="text-on-surface-variant/70">Yesterday</span></span>
+<span class="font-label-sm text-label-sm font-semibold text-error tabular-nums">Your share: ₹300</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 3 -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)] flex items-center gap-space-md transition-transform active:scale-[0.99]">
+<div class="w-11 h-11 rounded-xl bg-primary-fixed/40 text-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">luggage</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-2">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Weekend Trip</h4>
+<span class="font-numeric-md text-numeric-md text-on-surface tabular-nums">₹8,500</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm mt-0.5">
+<span class="truncate">Paid by Aman • <span class="text-on-surface-variant/70">24 Oct</span></span>
+<span class="font-label-sm text-label-sm font-semibold text-error tabular-nums">Your share: ₹2,125</span>
+</div>
+</div>
+</div>
+<!-- Activity Item 4 -->
+<div class="p-space-md rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_rgba(23,43,58,0.04)] flex items-center gap-space-md transition-transform active:scale-[0.99]">
+<div class="w-11 h-11 rounded-xl bg-secondary-container/50 text-secondary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[22px]">shopping_cart</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-2">
+<h4 class="font-title-md text-title-md text-on-surface truncate">Grocery Shopping</h4>
+<span class="font-numeric-md text-numeric-md text-on-surface tabular-nums">₹1,650</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm mt-0.5">
+<span class="truncate">Paid by Priya • <span class="text-on-surface-variant/70">22 Oct</span></span>
+<span class="font-label-sm text-label-sm font-semibold text-error tabular-nums">Your share: ₹550</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Micro Feedback Toast (Triggered via Settle / Remind action) -->
+<div class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface py-2.5 px- space-md px-4 rounded-full shadow-lg font-body-sm text-body-sm flex items-center gap-2 transition-all opacity-0 pointer-events-none translate-y-4 z-50" id="toastMessage">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed">check_circle</span>
+<span id="toastText">Action completed</span>
+</div>
+</div>
+</div>
+<script>
+  // Tab switcher logic
+  const tabOwe = document.getElementById('tabOwe');
+  const tabOwed = document.getElementById('tabOwed');
+  const panelOwe = document.getElementById('panelOwe');
+  const panelOwed = document.getElementById('panelOwed');
+
+  tabOwe.addEventListener('click', () => {
+    tabOwe.classList.add('bg-surface-container-lowest', 'shadow-sm', 'text-on-surface');
+    tabOwe.classList.remove('text-on-surface-variant');
+    tabOwed.classList.remove('bg-surface-container-lowest', 'shadow-sm', 'text-on-surface');
+    tabOwed.classList.add('text-on-surface-variant');
+    
+    panelOwe.classList.remove('hidden');
+    panelOwed.classList.add('hidden');
+  });
+
+  tabOwed.addEventListener('click', () => {
+    tabOwed.classList.add('bg-surface-container-lowest', 'shadow-sm', 'text-on-surface');
+    tabOwed.classList.remove('text-on-surface-variant');
+    tabOwe.classList.remove('bg-surface-container-lowest', 'shadow-sm', 'text-on-surface');
+    tabOwe.classList.add('text-on-surface-variant');
+
+    panelOwed.classList.remove('hidden');
+    panelOwe.classList.add('hidden');
+  });
+
+  // Action micro-feedback toasts
+  function showToast(text) {
+    const toast = document.getElementById('toastMessage');
+    const toastLabel = document.getElementById('toastText');
+    if (!toast || !toastLabel) return;
+    
+    toastLabel.textContent = text;
+    toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+      toast.classList.remove('opacity-100', 'translate-y-0');
+    }, 2400);
+  }
+
+  function handleSettle(name, amount) {
+    showToast(`Settlement initiated for ₹${amount} with ${name}`);
+  }
+
+  function handleRemind(name) {
+    showToast(`Payment reminder nudge sent to ${name}!`);
+  }
+
+  document.getElementById('addExpenseBtn')?.addEventListener('click', () => {
+    showToast('Add Expense wizard opened');
+  });
+
+  document.getElementById('createGroupBtn')?.addEventListener('click', () => {
+    showToast('Create Group setup initiated');
+  });
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(23,43,58,0.05)]" data-active-classes="text-primary font-title-md"><div class="relative flex items-center justify-around h-16 px-space-sm max-w-lg mx-auto"><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 transition-colors text-primary font-title-md" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[24px]">home</span><span class="font-label-sm text-label-sm tracking-normal">Home</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="groups" href="#"><span class="material-symbols-outlined text-[24px]">folder_shared</span><span class="font-label-sm text-label-sm tracking-normal">Groups</span></a><div class="flex items-center justify-center -translate-y-5 px-space-xs"><a aria-label="Add Expense" class="flex items-center justify-center w-14 h-14 rounded-full bg-primary-container text-on-primary shadow-[0_10px_20px_-4px_rgba(22,168,120,0.4),0_2px_6px_rgba(23,43,58,0.08)] active:scale-95 transition-all hover:bg-primary" data-path="add-expense" href="#"><span class="material-symbols-outlined text-[28px]">add</span></a></div><a class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="friends" href="#"><span class="material-symbols-outlined text-[24px]">diversity_3</span><span class="font-label-sm text-label-sm tracking-normal">Friends</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="activity" href="#"><span class="material-symbols-outlined text-[24px]">monitoring</span><span class="font-label-sm text-label-sm tracking-normal">Activity</span></a></div></nav></body></html>

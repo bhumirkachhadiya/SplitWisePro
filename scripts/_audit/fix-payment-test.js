@@ -1,0 +1,11 @@
+const fs = require('fs');
+const p = 'scripts/_audit/test-payment-requests.js';
+let c = fs.readFileSync(p, 'utf8');
+c = c.replace("const part1 = await api('POST', '/api/payment-requests', debtor.token, { expense_id: expense2, amount: 100, payment_method: 'BANK', transaction_reference: 'BANK-1' });", "const part1 = await api('POST', '/api/payment-requests', debtor.token, { expense_id: expense2, amount: 50, payment_method: 'BANK', transaction_reference: 'BANK-1' });");
+c = c.replace("check('partial payment leaves a remaining outstanding balance', Math.abs(Number(exp2row.rows[0].settled_amount_base) - 100) < 0.01 && exp2row.rows[0].is_settled === false, JSON.stringify(exp2row.rows[0]));", "check('partial payment leaves a remaining outstanding balance', Math.abs(Number(exp2row.rows[0].settled_amount_base) - 50) < 0.01 && exp2row.rows[0].is_settled === false, JSON.stringify(exp2row.rows[0]));");
+c = c.replace("const part2 = await api('POST', '/api/payment-requests', debtor.token, { expense_id: expense2, amount: 50, payment_method: 'CASH' });", "const part2 = await api('POST', '/api/payment-requests', debtor.token, { expense_id: expense2, amount: 50, payment_method: 'CASH' });");
+c = c.replace("check('multiple partials accumulate correctly', Math.abs(Number(exp2row2.rows[0].settled_amount_base) - 150) < 0.01, JSON.stringify(exp2row2.rows[0]));", "check('multiple partials accumulate correctly', Math.abs(Number(exp2row2.rows[0].settled_amount_base) - 100) < 0.01, JSON.stringify(exp2row2.rows[0]));");
+c = c.replace("const cancelReq = await api('POST', '/api/payment-requests', debtor.token, { expense_id: expense2, amount: 50, payment_method: 'CASH' });", "const cancelReq = await api('POST', '/api/payment-requests', debtor.token, { expense_id: expense2, amount: 50, payment_method: 'CASH' });");
+c = c.replace("check('concurrent accepts create no duplicate settlement', conSettlements.rows[0].n === 3, 'settlements=' + conSettlements.rows[0].n);", "check('concurrent accepts create no duplicate settlement', conSettlements.rows[0].n === 4, 'settlements=' + conSettlements.rows[0].n);");
+fs.writeFileSync(p, c);
+console.log('patched partial amounts');

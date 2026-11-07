@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#f7f9fb;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-container": "#1b2e3e", "on-error": "#ffffff", "on-background": "#191c1e", "surface-container-lowest": "#ffffff", "on-secondary-container": "#007150", "primary-container": "#16a878", "outline-variant": "#bccac0", "on-surface-variant": "#3d4a42", "error-container": "#ffdad6", "tertiary-container": "#8296a8", "on-error-container": "#93000a", "on-primary": "#ffffff", "on-tertiary-fixed-variant": "#354959", "surface-bright": "#f7f9fb", "inverse-surface": "#2d3133", "on-secondary-fixed": "#002115", "on-surface": "#191c1e", "inverse-on-surface": "#eff1f3", "tertiary": "#4d6171", "tertiary-fixed": "#d0e5f9", "primary": "#006c4b", "error": "#ba1a1a", "primary-fixed": "#7df9c3", "on-tertiary-fixed": "#081d2c", "surface-container": "#eceef0", "on-secondary-fixed-variant": "#005139", "surface-container-highest": "#e0e3e5", "secondary-container": "#91f3c7", "secondary-fixed-dim": "#78d9af", "on-secondary": "#ffffff", "surface-container-low": "#f2f4f6", "secondary": "#006c4c", "surface": "#f7f9fb", "surface-variant": "#e0e3e5", "background": "#f7f9fb", "on-primary-fixed-variant": "#005138", "on-tertiary": "#ffffff", "surface-container-high": "#e6e8ea", "secondary-fixed": "#94f6ca", "tertiary-fixed-dim": "#b4c9dc", "outline": "#6d7a72", "on-primary-container": "#003422", "on-primary-fixed": "#002114", "surface-tint": "#006c4b", "surface-dim": "#d8dadc", "primary-fixed-dim": "#5edda8", "inverse-primary": "#5edda8" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-md": "0.75rem", "gutter": "1.5rem", "gutter-mobile": "0.75rem", "margin": "2rem", "space-sm": "0.5rem", "space-xl": "1.5rem", "space-xs": "0.25rem", "margin-mobile": "1rem", "space-lg": "1rem" }, "fontFamily": { "headline-sm": ["Inter"], "body-lg": ["Inter"], "display-lg-mobile": ["Inter"], "body-sm": ["Inter"], "numeric-md": ["Inter"], "headline-lg": ["Inter"], "body-md": ["Inter"], "numeric-lg": ["Inter"], "display-lg": ["Inter"], "label-sm": ["Inter"], "title-lg": ["Inter"], "headline-md": ["Inter"], "headline-lg-mobile": ["Inter"], "label-md": ["Inter"], "title-md": ["Inter"], "numeric-hero": ["Inter"] }, "fontSize": { "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}], "display-lg-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "700"}], "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}], "numeric-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}], "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}], "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}], "numeric-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.03em", "fontWeight": "700"}], "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}], "title-lg": ["18px", {"lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "600"}], "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600"}], "headline-lg-mobile": ["26px", {"lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700"}], "label-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}], "title-md": ["16px", {"lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600"}], "numeric-hero": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased flex flex-col min-h-screen selection:bg-secondary-container selection:text-on-secondary-container"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(23,43,58,0.04)]"><div class="h-16 px-space-lg flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><img alt="SplitEase App Logo" class="h-8 w-auto object-contain flex-shrink-0" src="https://lh3.googleusercontent.com/aida/AEtjO1VUb2UHsXA9ug2240puykOUvIZD73Zxbajk6vYmDCwWG-MQqB6c4dj7cp3SHRP3BYCQLuJuHddL4l2sIc3FzunwzATnkzX-jqD6vKEwlsq6QbO7-kiot880doO54hhbFL8MgCsKUr4bKMhsEi_C99hjcxsCt7O_GwWMctWIYFpkZTIxQHG3gIUcDdTO-02aY6m8CT7hi_I0w6SFO6Aqg5C5i_whpT9CEOLOf3H2ssxT9g"/><div class="flex flex-col min-w-0"><span class="font-title-lg text-title-lg text-primary leading-tight tracking-tight">SplitEase</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate">Groups</span></div></div><div class="flex items-center gap-space-xs"><button aria-label="Notifications" class="relative w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface"></span></button><a aria-label="User Profile" class="w-11 h-11 flex items-center justify-center rounded-full transition-transform active:scale-95" data-path="profile" href="#"><img alt="Profile" class="w-8 h-8 rounded-full object-cover shadow-[0_1px_3px_rgba(23,43,58,0.12)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_-w3K--wX0VJ_HWoFY9w7jhiXhuanofSUJq8T0qv_dqhLduHWNEQkIme62Z0mYv95vkhFvj79tKnAxZETiqCkrUNiEgBZkYjYKq34W159cc2OY6B6XNHePKNnIDeK_C09axjc4o5_Wlz8Usyz7WQNqQXhg8NjtlUsGoFbs4O8y-17oq3WvpbXlK6WYQeKqjLH5TKADBJapwwgvwkj83h4Odsu9qv_QUuSzG4yvX8t"/></a></div></div></header><main class="flex-1 w-full bg-surface pt-16 pb-28"><div class="flex flex-col w-full">
+<!-- Interactive Top Action & Search Section -->
+<section class="px-gutter-mobile py-space-md flex flex-col gap-space-md">
+<!-- Quick Metrics & Group Quick Action -->
+<div class="flex items-center justify-between gap-space-sm bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">groups</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface leading-tight">4 Active Groups</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant truncate">Net: <span class="text-primary font-semibold">+₹1,500</span> across groups</span>
+</div>
+</div>
+<button class="flex items-center gap-space-xs px-space-md py-space-sm bg-primary-container hover:bg-primary text-on-primary rounded-xl font-label-md text-label-md shadow-sm transition-all active:scale-95 flex-shrink-0" id="create-group-btn">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New Group</span>
+</button>
+</div>
+<!-- Search Bar with Filter Button -->
+<div class="flex items-center gap-space-xs">
+<div class="flex-1 relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-tertiary text-[20px] pointer-events-none">search</span>
+<input class="w-full bg-surface-container-lowest pl-10 pr-4 py-2.5 rounded-xl font-body-md text-body-md text-on-surface placeholder:text-outline focus:outline-none shadow-sm focus:shadow-md transition-shadow" id="group-search-input" placeholder="Search groups, trips, flatmates..." type="text"/>
+<button aria-label="Clear Search" class="hidden absolute right-3 text-tertiary hover:text-on-surface" id="clear-search-btn">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<button aria-label="Filter groups" class="relative w-11 h-11 flex items-center justify-center bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant rounded-xl shadow-sm transition-colors flex-shrink-0" id="filter-btn">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+<span class="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-primary"></span>
+</button>
+</div>
+<!-- Filter Filter Chips (Interactive Pill Bar) -->
+<div class="flex items-center gap-space-xs overflow-x-auto pb-0.5 no-scrollbar">
+<button class="filter-chip active-chip px-3 py-1.5 rounded-full bg-primary text-on-primary font-label-sm text-label-sm transition-all flex items-center gap-1 shadow-sm whitespace-nowrap" data-filter="all">
+<span>All</span>
+<span class="opacity-80 font-normal">(4)</span>
+</button>
+<button class="filter-chip px-3 py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-all flex items-center gap-1 whitespace-nowrap shadow-sm" data-filter="owed">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span>You are owed</span>
+</button>
+<button class="filter-chip px-3 py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-all flex items-center gap-1 whitespace-nowrap shadow-sm" data-filter="owe">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span>You owe</span>
+</button>
+<button class="filter-chip px-3 py-1.5 rounded-full bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-all flex items-center gap-1 whitespace-nowrap shadow-sm" data-filter="recent">
+<span>Recent activity</span>
+</button>
+</div>
+</section>
+<!-- Groups List Feed -->
+<section class="px-gutter-mobile flex flex-col gap-space-md pb-space-lg" id="groups-list">
+<!-- Card 1: Goa Trip -->
+<article class="group-card bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-name="Goa Trip" data-status="owed">
+<!-- Card Header Accent Ribbon -->
+<div class="h-1.5 w-full bg-gradient-to-r from-primary-fixed via-primary to-secondary"></div>
+<div class="p-space-md flex flex-col gap-space-md">
+<!-- Top Row: Icon Badge, Title, Category, Balance Chip -->
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-secondary-container to-primary-fixed flex items-center justify-center text-on-secondary-container shadow-sm flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]">beach_access</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-title-lg text-title-lg text-on-surface truncate">Goa Trip</h2>
+<span class="material-symbols-outlined text-tertiary text-[16px]" title="Trip Shared Ledger">flight_takeoff</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">5 traveling companions</span>
+</div>
+</div>
+<!-- Positive Balance Badge -->
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]">arrow_downward_alt</span>
+<span>+₹2,400</span>
+</span>
+<span class="font-label-sm text-label-sm text-primary mt-0.5">You are owed</span>
+</div>
+</div>
+<!-- Middle Row: Members Avatars Stack & Spend Summary -->
+<div class="flex items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center gap-space-xs min-w-0">
+<!-- Avatars Stack -->
+<div class="flex -space-x-2 overflow-hidden items-center py-0.5 pl-0.5">
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young South Asian traveler wearing sunglasses with beach background, high quality portrait photograph with warm natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBr22D0Rlo-SwPucpgodKh34QIA7PM-UqaimC9Vcc5tfsG09xBjUw7gHqO3wo43fhe1fZNrNyR6a-l-1iJbgWhWjFh5spTTH0uwJoyCroZoGjBrMSWpD8ywph6UZ2HbqVncTVjZ9zR3H3wUpVa0MvOX0VGN2qTMrdHF8Db4wG0xMl7y8R3sNGNWxBsPtWwIAyF062QkM0XzmmnYWXMY-y3kwiCMMRkfhicqSijQ0Kxy"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young woman backpacker laughing outdoors with palm trees and ocean glow in the golden hour" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQBPr3cWSTKV0uFe3nXoMPRvFOmVy3UAWwUloBmr0m9euLgyMWOpNwEydDiXX0_XiitWRCUPMFfuZeQKOtTb6YDMVkdKU0PlVX7o2yLqlpi2WevyfRp9sr0ycA3chq_s5CxN24bGBx4uTkDOq3R-Fcx_efK1SBTnHjwuwxZlEQ2NR3O75sN-E5OBmlBxXMhB9577ezHl2znkiQg2HwhW6GuucyOVNUd8tP-_7WqxMX"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Smiling man in casual vacation linen shirt on a sunny coastal terrace" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuUHDjXfUeKmThawnzoTdWTkKIv0GM-EkxAHCam_k0cJtXgcdNLea7jPvqw3fds8ESrnuDYQviHm2UD1U9FiPTcwIRlnI2krmgm0-V8hApvBtNy6NDx9lykY4ZzuqCxlqj1Z9zpDIlIzbqQ2EbLWNlyiZb1SEkwgRPFs9M5t9cWuYTOrYpWkxwH2RGGhQmUYGYWxwbgzhrY4Kspe42dMq15gulXsFqr2oNsXWAamuu"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Woman traveler holding camera in front of historic Portuguese architecture in Goa" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIl97v0zUVmQbWWJ3AcPyDkQiiLYUdFmc37wnOqrWpd5AoZ6MibzQM4ySCDURYt_d4lpnuqKGuafWhz38jVS9elI42s7zsbZOMD9jGRjlj5KPpcvDaDoR-bqVWpepaBRKv1xYedaEuPSeuafek9bQFDDY-6SJcsYr4FfphTbLg6WqyO2v_6LlbehLSTM73G1ZTYtxE4B9U8-BAgJ5kPTYqq7-1VTPk7UW14tEkPNh_"/>
+<div class="inline-flex h-7 w-7 rounded-full bg-tertiary-fixed text-on-tertiary-fixed text-[11px] font-semibold items-center justify-center shadow-sm">
+                +1
+              </div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1">5 members</span>
+</div>
+<!-- Total Group Spend -->
+<div class="flex flex-col items-end">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Group Spend</span>
+<span class="font-numeric-md text-numeric-md text-on-surface">₹25,400</span>
+</div>
+</div>
+<!-- Bottom Row: Recent Activity & Action Button -->
+<div class="flex items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex items-center gap-1.5 min-w-0 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-tertiary flex-shrink-0">receipt_long</span>
+<p class="font-body-sm text-body-sm truncate">
+<span class="font-semibold text-on-surface">Alex</span> added Scuba Diving <span class="text-tertiary font-normal">(2h ago)</span>
+</p>
+</div>
+<a class="flex items-center gap-1 px-3 py-1.5 bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md rounded-lg transition-colors flex-shrink-0 active:scale-95 shadow-sm" data-path="group-details" href="#">
+<span>View Group</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</div>
+</article>
+<!-- Card 2: Flatmates -->
+<article class="group-card bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-name="Flatmates" data-status="owe">
+<!-- Header Accent Ribbon -->
+<div class="h-1.5 w-full bg-gradient-to-r from-error-container via-error to-on-error-container"></div>
+<div class="p-space-md flex flex-col gap-space-md">
+<!-- Top Row -->
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center text-tertiary shadow-sm flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]">apartment</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-title-lg text-title-lg text-on-surface truncate">Flatmates</h2>
+<span class="material-symbols-outlined text-tertiary text-[16px]" title="Recurring Household Split">home</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Apt 402, Green Glen</span>
+</div>
+</div>
+<!-- Negative Balance Badge -->
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]">arrow_upward_alt</span>
+<span>-₹1,200</span>
+</span>
+<span class="font-label-sm text-label-sm text-error mt-0.5">You owe</span>
+</div>
+</div>
+<!-- Middle Row: Members & Total -->
+<div class="flex items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center gap-space-xs min-w-0">
+<!-- Avatars Stack -->
+<div class="flex -space-x-2 overflow-hidden items-center py-0.5 pl-0.5">
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young professional man working with laptop in warm urban apartment interior with plants" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8ZtukOQCLTR3-X0IQVKrLQSkH10NOr7HB1Hjek3e7-hny1Cg5WsvLNgnGLHh9ZuqoGvbzo_5fsUWOpuilthwEI6lbfxPiHcPLfpzBCj0uc97FbXHc4jQ3eWaS5QuMSShmZ3f3p_YuyXDV_he9LRRr9T2N5ekFURRsZlV_rl87AUb601uQb7OhUb-sGUp0z3a7PZlOoVl-gCzDvCjtBEp_ouoEmuRVgfKoN6LcK33U"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Creative female flatmate drinking coffee in a sunlit modern kitchen nook" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbYA6RdjBVLUbTi8JD3eCQTnBnqKGcfzYzWbPUI3y0-5chINMvwU_FVxKV0iFnO3aC6ZXsQzde8G0dcs6Fa4Zq46weetRl6IR0DO_ztXcv9t40JbCKYjUvFJmU1kY39wZ-wWDBRQ4JWMKKinOxxMHY3Pwk_fMUk1G9zJH2crg032SsCyIijzsoz_Zsosl-NCKMhGTr_sOd7ItvAnEkSGNubJ2qhE1C7B0F6XpNTEGp"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young man smiling in cozy indoor room setup with warm ambient desk lamp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoP6LrXNvVZUA_Sqm1iGQKjorKv8Mgmy91H8BkP_A3trbQIp3kmuzBkav7btLlB0GzdMgyj76B1GqjSlOkYleRzb5UV_CnNaH3L2tYN5263aLQhRpyVoaM7Fc_Bl5YN6lZIL4ACVNXI7w2IWdUAwO1tO_UXJgA04Ezy8ibYoid46E8AWhufbKrJhPaT6kDV60URaJhr1Y4PROaX8SuwU-k7bt3vGw9xiiHUJWaZH9-"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Female roommate wearing casual sweater reading book on an aesthetic modular sofa" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6nMebrK6I0yUfWjT7ntaAuQQSsxtLrcbav2eNRhANsINsKihRdw-2LFQ0Oa_RyFqdIdixJIJfyqNouDkgYp0U0UqhWOuru7Syttam1mZzA8y1EhsO2KdsvXqtGl8VjIl8uf2sWzzVkHkmiy-qAR1rj2Aq--UFloVoez48ZjhQYD3ILr37YUinaNXO9ZFlZMxLL3pNlRMEgSQ39W-K6NPdCU6IgBFrXvT739dGERAb"/>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1">4 members</span>
+</div>
+<!-- Total Spend -->
+<div class="flex flex-col items-end">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Group Spend</span>
+<span class="font-numeric-md text-numeric-md text-on-surface">₹18,500</span>
+</div>
+</div>
+<!-- Bottom Row: Activity & Action -->
+<div class="flex items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex items-center gap-1.5 min-w-0 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-tertiary flex-shrink-0">bolt</span>
+<p class="font-body-sm text-body-sm truncate">
+<span class="font-semibold text-on-surface">Rahul</span> added Electricity Bill <span class="text-tertiary font-normal">(Yesterday)</span>
+</p>
+</div>
+<a class="flex items-center gap-1 px-3 py-1.5 bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md rounded-lg transition-colors flex-shrink-0 active:scale-95 shadow-sm" data-path="group-details" href="#">
+<span>View Group</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</div>
+</article>
+<!-- Card 3: Office Lunch -->
+<article class="group-card bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-name="Office Lunch" data-status="owed">
+<!-- Header Accent Ribbon -->
+<div class="h-1.5 w-full bg-gradient-to-r from-secondary-fixed via-primary-container to-secondary"></div>
+<div class="p-space-md flex flex-col gap-space-md">
+<!-- Top Row -->
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-xl bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed shadow-sm flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]">restaurant</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-title-lg text-title-lg text-on-surface truncate">Office Lunch</h2>
+<span class="material-symbols-outlined text-tertiary text-[16px]" title="Daily Food Splits">lunch_dining</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Design & Product Crew</span>
+</div>
+</div>
+<!-- Balance Badge -->
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]">arrow_downward_alt</span>
+<span>+₹750</span>
+</span>
+<span class="font-label-sm text-label-sm text-primary mt-0.5">You are owed</span>
+</div>
+</div>
+<!-- Middle Row: Members & Total -->
+<div class="flex items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center gap-space-xs min-w-0">
+<!-- Avatars Stack -->
+<div class="flex -space-x-2 overflow-hidden items-center py-0.5 pl-0.5">
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Corporate professional woman smiling in smart casual wear in modern cafe dining space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTlpfrREfp9_cF89y31nAz7rr9N_Jb5ei0mpI95bQudWdYhbwjEKmicoBOUflsJ8BwzyDK3isyw_vofHs97jMSgYdozfOsH_REo4j8ui2HRC4_4M2HpmErbdJWlWXKtaAgQxqCZL-DoTM2d4v-GuTpJArPRu7CnX5gNnEzMTPuKN_KJ7SSFFUNYo3uu9IOFLt28Dtvn4-yRoPTLofSLML3WGHLF0ia5LI9uFMsQQA1"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Tech designer colleague with stylish spectacles sitting at restaurant dining table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmrij_sOGko9OeZkt7cELKpL8pYg15am2ILTj6nXETKKA4tVhZit8hsiMzV1teNApPAxE4q-pUnDoef926ZcwtGSD7KRx0_WsKFXjz_y65ELw7gvJvf0iXy2IWyI9W2tMpXQUm4ANhruY4mY-uqc85Q4OKsaR65hCDvHfeSKwBqWIL-wP2aYg1qZFjxP6O1Yojzr_QnQ5OAI_CsNQmzen__rDqgqxUbEDug1isF8U-"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young Indian business executive in casual Friday button down shirt smiling warmly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDotgMC5ZMq4Qi8Ht5vcuAMtZs_jpSjyTZXRR46vIJWP1DeME2F2MrRIsgNZjDUultyn5qZKUSrn0Ia69vmcS0-zuYoQO7iMlLFFI0lpJv_vhcl_wrHafzVxRyiQOc_mpEXYKLYEvPLu9PhmhdRmHAsCjI5e3rEJz70gkgrOUKCqVezx8DjGchgW_d-8BaR_czN6woTFsXz1ygdqqK1C7C-Ksel1tunOphhDlPMoIOP"/>
+<div class="inline-flex h-7 w-7 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[11px] font-semibold items-center justify-center shadow-sm">
+                +3
+              </div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1">6 members</span>
+</div>
+<!-- Total Spend -->
+<div class="flex flex-col items-end">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Group Spend</span>
+<span class="font-numeric-md text-numeric-md text-on-surface">₹9,800</span>
+</div>
+</div>
+<!-- Bottom Row: Activity & Action -->
+<div class="flex items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex items-center gap-1.5 min-w-0 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary flex-shrink-0">check_circle</span>
+<p class="font-body-sm text-body-sm truncate">
+<span class="font-semibold text-on-surface">Priya</span> settled <span class="font-semibold text-primary">₹450</span> <span class="text-tertiary font-normal">(4h ago)</span>
+</p>
+</div>
+<a class="flex items-center gap-1 px-3 py-1.5 bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md rounded-lg transition-colors flex-shrink-0 active:scale-95 shadow-sm" data-path="group-details" href="#">
+<span>View Group</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</div>
+</article>
+<!-- Card 4: Weekend Friends -->
+<article class="group-card bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden" data-name="Weekend Friends" data-status="owe">
+<!-- Header Accent Ribbon -->
+<div class="h-1.5 w-full bg-gradient-to-r from-error-container via-tertiary to-on-tertiary-fixed-variant"></div>
+<div class="p-space-md flex flex-col gap-space-md">
+<!-- Top Row -->
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-xl bg-gradient-to-br from-tertiary-fixed to-surface-container-high flex items-center justify-center text-tertiary shadow-sm flex-shrink-0">
+<span class="material-symbols-outlined text-[26px]">celebration</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<h2 class="font-title-lg text-title-lg text-on-surface truncate">Weekend Friends</h2>
+<span class="material-symbols-outlined text-tertiary text-[16px]" title="Social Hangouts">local_activity</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Friday nights & get-togethers</span>
+</div>
+</div>
+<!-- Negative Balance Badge -->
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-md text-label-md flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]">arrow_upward_alt</span>
+<span>-₹450</span>
+</span>
+<span class="font-label-sm text-label-sm text-error mt-0.5">You owe</span>
+</div>
+</div>
+<!-- Middle Row: Members & Total -->
+<div class="flex items-center justify-between gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center gap-space-xs min-w-0">
+<!-- Avatars Stack -->
+<div class="flex -space-x-2 overflow-hidden items-center py-0.5 pl-0.5">
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young man with energetic smile at evening sports bowling venue with moody neon ambient reflections" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZYWmK6K18i3JbBHqV_w5ePGGGBoKoASmBkHlnjxZ3M9tz4XEo7NNt9PbxHyr3zeMSfLiAvpx-In_Uj7VRXlCIYDkMxrqwzJOu_hzyuZehdRPJSb0oKIJwwVhMcoHaJrnijnDQUmdsx2hVmWJhM8nacg-jGG6chxAkwJT6y9kEQHtukwrMO5DDS3zSk819yQxZQMlnQ7m_cTmg8v3B_4kr7N_xweM8HUDlwB6WlCat"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Group friend celebrating and smiling under colorful festive string lights at dusk" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOEtJI7gQLr5r_yUo7ReP6uTR9IH3B5aQjT_cn3tExEzzB-MHpC0l4cE2Dj3KmmPkHjd15HkzzNQNEVrVpQ2j3n1MTMKl3Ja01Gge5CN6gYA8y3MjROzcDbStczv7NDF4vhshwFhG9HtlRkPAOxYqnvpivvH_xcqf843lYhlmhic-1-foBOg3chG5sYCl5A-znUYuSqJMk4E8mgMQlEGsAAyVaP-2cdKTA1P3rHru0"/>
+<img class="inline-block h-7 w-7 rounded-full object-cover shadow-sm bg-surface-container" data-alt="Young woman laughing happily in an arcade venue with retro game lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdHZSUx69pcUuEvo7FwBRgx4usbNAv-wCA2zxBQ05kxgUfbfsftDAVAMHZO3HYVUO4faENSeq_1GkZ5J2ueBTVOh2Hiz6GHW8pGFLXPborCZx7-TpvQZGFV1f6UyGQYo6D1J3nr_a5Zn-q2iSgQa6scNvtdeSgPB8RPF9DHsH0ojvhnJUhr-RwDS8zi8li2sOhjP5LV0NEipfpFne78uCzKVkmsoYmiHMFX-WKVA4b"/>
+<div class="inline-flex h-7 w-7 rounded-full bg-tertiary-container text-on-tertiary-container text-[11px] font-semibold items-center justify-center shadow-sm">
+                +2
+              </div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-1">5 members</span>
+</div>
+<!-- Total Spend -->
+<div class="flex flex-col items-end">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Group Spend</span>
+<span class="font-numeric-md text-numeric-md text-on-surface">₹12,000</span>
+</div>
+</div>
+<!-- Bottom Row: Activity & Action -->
+<div class="flex items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex items-center gap-1.5 min-w-0 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-tertiary flex-shrink-0">sports_esports</span>
+<p class="font-body-sm text-body-sm truncate">
+<span class="font-semibold text-on-surface">Aman</span> added Bowling Night <span class="text-tertiary font-normal">(3d ago)</span>
+</p>
+</div>
+<a class="flex items-center gap-1 px-3 py-1.5 bg-surface-container-high hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md rounded-lg transition-colors flex-shrink-0 active:scale-95 shadow-sm" data-path="group-details" href="#">
+<span>View Group</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</div>
+</article>
+</section>
+<!-- Empty Search Results State (Hidden by default) -->
+<div class="hidden px-gutter-mobile py-12 flex flex-col items-center justify-center text-center" id="no-results-state">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-tertiary mb-3">
+<span class="material-symbols-outlined text-[32px]">folder_off</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1">No groups found</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-xs mb-4">
+      We couldn't find any groups matching your query. Create a new one or clear search filter.
+    </p>
+<button class="px-4 py-2 bg-surface-container-highest hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-xl shadow-sm transition-colors" id="reset-search-btn">
+      Reset Filters
+    </button>
+</div>
+<!-- Settle-Up / Quick Balance Floating Snapshot Widget -->
+<section class="px-gutter-mobile pb-space-lg">
+<div class="bg-gradient-to-br from-surface-container-lowest to-surface-container p-space-md rounded-xl shadow-sm flex items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Overall Settlement</span>
+<span class="font-title-md text-title-md text-on-surface leading-snug truncate">You receive <span class="text-primary font-semibold">₹1,500</span> net</span>
+</div>
+</div>
+<button class="px-3.5 py-2 rounded-xl bg-secondary-container hover:bg-primary-fixed text-on-secondary-container font-label-md text-label-md font-semibold transition-all active:scale-95 shadow-sm flex-shrink-0">
+        Settle All
+      </button>
+</div>
+</section>
+</div>
+<!-- Interactive Client-side Script -->
+<script>
+  (function initGroupListInteractions() {
+    const searchInput = document.getElementById('group-search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const filterButtons = document.querySelectorAll('.filter-chip');
+    const cards = document.querySelectorAll('.group-card');
+    const noResults = document.getElementById('no-results-state');
+    const resetBtn = document.getElementById('reset-search-btn');
+    const createBtn = document.getElementById('create-group-btn');
+
+    let currentFilter = 'all';
+
+    function filterCards() {
+      const query = (searchInput.value || '').trim().toLowerCase();
+      let visibleCount = 0;
+
+      cards.forEach(card => {
+        const name = (card.getAttribute('data-name') || '').toLowerCase();
+        const status = card.getAttribute('data-status') || '';
+
+        const matchesQuery = !query || name.includes(query);
+        let matchesPill = true;
+
+        if (currentFilter === 'owed') {
+          matchesPill = status === 'owed';
+        } else if (currentFilter === 'owe') {
+          matchesPill = status === 'owe';
+        } else if (currentFilter === 'recent') {
+          // highlight top 2 recent
+          matchesPill = true;
+        }
+
+        if (matchesQuery && matchesPill) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      if (visibleCount === 0) {
+        noResults.classList.remove('hidden');
+      } else {
+        noResults.classList.add('hidden');
+      }
+
+      if (query.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+    }
+
+    searchInput?.addEventListener('input', filterCards);
+
+    clearBtn?.addEventListener('click', () => {
+      searchInput.value = '';
+      filterCards();
+      searchInput.focus();
+    });
+
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => {
+          b.classList.remove('bg-primary', 'text-on-primary', 'active-chip');
+          b.classList.add('bg-surface-container-lowest', 'text-on-surface-variant');
+        });
+        btn.classList.remove('bg-surface-container-lowest', 'text-on-surface-variant');
+        btn.classList.add('bg-primary', 'text-on-primary', 'active-chip');
+
+        currentFilter = btn.getAttribute('data-filter') || 'all';
+        filterCards();
+      });
+    });
+
+    resetBtn?.addEventListener('click', () => {
+      searchInput.value = '';
+      currentFilter = 'all';
+      filterButtons.forEach(b => {
+        if (b.getAttribute('data-filter') === 'all') {
+          b.classList.add('bg-primary', 'text-on-primary', 'active-chip');
+          b.classList.remove('bg-surface-container-lowest', 'text-on-surface-variant');
+        } else {
+          b.classList.remove('bg-primary', 'text-on-primary', 'active-chip');
+          b.classList.add('bg-surface-container-lowest', 'text-on-surface-variant');
+        }
+      });
+      filterCards();
+    });
+
+    createBtn?.addEventListener('click', () => {
+      searchInput.placeholder = 'Name your new group...';
+      searchInput.focus();
+    });
+  })();
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(23,43,58,0.05)]" data-active-classes="text-primary font-title-md"><div class="relative flex items-center justify-around h-16 px-space-sm max-w-lg mx-auto"><a class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[24px]">home</span><span class="font-label-sm text-label-sm tracking-normal">Home</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 transition-colors text-primary font-title-md" data-path="groups" href="#"><span class="material-symbols-outlined text-[24px]">folder_shared</span><span class="font-label-sm text-label-sm tracking-normal">Groups</span></a><div class="flex items-center justify-center -translate-y-5 px-space-xs"><a aria-label="Add Expense" class="flex items-center justify-center w-14 h-14 rounded-full bg-primary-container text-on-primary shadow-[0_10px_20px_-4px_rgba(22,168,120,0.4),0_2px_6px_rgba(23,43,58,0.08)] active:scale-95 transition-all hover:bg-primary" data-path="add-expense" href="#"><span class="material-symbols-outlined text-[28px]">add</span></a></div><a class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="friends" href="#"><span class="material-symbols-outlined text-[24px]">diversity_3</span><span class="font-label-sm text-label-sm tracking-normal">Friends</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-12 gap-0.5 text-on-surface-variant transition-colors hover:text-on-surface" data-path="activity" href="#"><span class="material-symbols-outlined text-[24px]">monitoring</span><span class="font-label-sm text-label-sm tracking-normal">Activity</span></a></div></nav></body></html>

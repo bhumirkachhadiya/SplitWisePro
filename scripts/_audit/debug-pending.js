@@ -1,0 +1,21 @@
+const { openPage } = require('./cdp-lib');
+const BASE = 'http://127.0.0.1:5000';
+(async () => {
+  const c = await openPage(BASE + '/');
+  await c.waitFor('document.readyState === "complete"');
+  await c.send('Network.clearBrowserCookies');
+  await c.evaluate('localStorage.clear(); sessionStorage.clear();');
+  await c.goto(BASE + '/');
+  await new Promise(r => setTimeout(r, 800));
+  await c.evaluate(`(() => { document.getElementById('authEmail').value='rahul'; document.getElementById('authPassword').value='password123'; document.getElementById('authForm').dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); })()`);
+  await c.waitFor('!document.getElementById("appWorkspace").classList.contains("hidden")', 15000);
+  await new Promise(r => setTimeout(r, 2500));
+  await c.evaluate(`navigateTo('settle')`);
+  await new Promise(r => setTimeout(r, 2000));
+  console.log('before:', await c.evaluate(`(() => { const p=document.getElementById('pendingPaymentsPanel'); return { exists:!!p, cls:p&&p.className, fn: typeof loadPendingPayments }; })()`));
+  const res = await c.evaluate(`(async () => { try { await loadPendingPayments(); const p=document.getElementById('pendingPaymentsPanel'); const l=document.getElementById('pendingPaymentsList'); return { cls:p.className, html:l.innerHTML.slice(0,200), children:l.children.length }; } catch(e) { return { error: String(e) }; } })()`);
+  console.log('after manual:', res);
+  console.log('api direct:', await c.evaluate(`(async () => { const r = await fetch(API + '/upi/pending-requests'); return { status: r.status, len: (await r.text()).length }; })()`));
+  console.log('errors:', c.errors.slice(0,5));
+  c.close(); process.exit(0);
+})().catch(e => { console.error(e); process.exit(1); });

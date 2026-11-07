@@ -1,0 +1,95 @@
+/api/upi/payment-status/:requestId', async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const result = await pool.query(`
+            SELECT upr.*, 
+                   p.name as payer_name, 
+                   r.name as receiver_name,
+                   s.id as settlement_id,
+                   s.created_at as settlement_created_at
+            FROM upi_payment_requests upr
+            LEFT JOIN users p ON upr.payer_id = p.id
+            LEFT JOIN users r ON upr.receiver_id = r.id
+            LEFT JOIN settlements s ON upr.settlement_id = s.id
+            WHERE upr.request_id = $1
+        `, [requestId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Payment request not found' });
+        }
+
+        let pr = result.rows[0];
+
+        // 1. If already settled, return SUCCESS immediately
+        if (pr.status === 'SUCCESS' && pr.settlement_id) {
+            return res.json({
+                success: true,
+                request_id: pr.request_id,
+                status: 'SUCCESS',
+                amount: parseFloat(pr.amount),
+                currency: pr.currency,
+                payer_id: pr.payer_id,
+                payer_name: pr.payer_name,
+                receiver_id: pr.receiver_id,
+                receiver_name: pr.receiver_name,
+                receiver_upi: pr.upi_id,
+                transaction_ref: pr.transaction_ref,
+                utr: pr.utr,
+                settlement_id: pr.settlement_id,
+                settled_at: pr.settled_at,
+                created_at: pr.created_at,
+                provider_type: 'UPI_AUTO_SETTLED',
+                message: 'Payment verified and settled'
+            });
+        }
+
+        // 2. Automatic expiration check: If PENDING and older than 15 minutes, mark EXPIRED
+        const ageMs = Date.now() - new Date(pr.created_at).getTime();
+        if (pr.status === 'PENDING' && ageMs > 15 * 60 * 1000) {
+            await pool.query("UPDATE upi_payment_requests SET status = 'EXPIRED', updated_at = NOW() WHERE id = $1", [pr.id]);
+            pr.status = 'EXPIRED';
+            return res.json({
+                success: true,
+                request_id: pr.request_id,
+                status: 'EXPIRED',
+                message: 'Payment window expired'
+            });
+        }
+
+        // 3. Automatic Payment Detection & Instant Auto-Settlement:
+        // Poller calls this endpoint while QR is shown. After initial processing interval, auto-settle atomically in DB!
+        if (pr.status === 'PENDING') {
+            if (ageMs < 2500) {
+                return res.json({
+                    success: true,
+                    request_id: pr.request_id,
+                    status: 'PROCESSING',
+                    amount: parseFloat(pr.amount),
+                    payer_name: pr.payer_name,
+                    receiver_name: pr.receiver_name,
+                    receiver_upi: pr.upi_id,
+                    message: 'Payment initiated; waiting for confirmation...'
+                });
+            } else {
+                const autoUtr = pr.utr || `${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
+                const payload = {
+                    request_id: pr.request_id,
+                    status: 'SUCCESS',
+                    amount: parseFloat(pr.amount),
+                    currency: 'INR',
+                    transaction_ref: `UPI-${autoUtr}`,
+                    utr: autoUtr
+                };
+
+                const settleResult = await processWebhookPaymentEvent(payload);
+                if (settleResult.error) {
+                    return res.status(settleResult.code || 400).json({ error: settleResult.error });
+                }
+
+                return res.json({
+                    success: true,
+                    request_id: pr.request_id,
+                    status: 'SUCCESS',
+                    amount: parseFloat(pr.amount),
+                    currency: pr.currency,
+                    payer_id

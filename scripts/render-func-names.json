@@ -1,0 +1,39 @@
+{
+  "matches": [
+    "function onExpenseGroupChange(",
+    "function openEditExpenseModal(",
+    "function closeEditExpenseModal(",
+    "function onEditExpenseAmountChange(",
+    "function renderEditExpenseSplits(",
+    "function handleUpdateExpenseSubmit(",
+    "function renderAllExpenses(",
+    "function applyExpenseFilters(",
+    "function resetExpenseFilters(",
+    "function handleDeleteExpense(",
+    "function closeDeleteExpenseModal(",
+    "function submitExpenseCorrection(",
+    "function selectExpenseCategory(",
+    "function onExpenseGroupChange(",
+    "function showAddExpenseValidationAlert(",
+    "function handleCreateExpense(",
+    "function openExpenseReminderModal(",
+    "function closeExpenseReminderModal(",
+    "function confirmSendExpenseReminder("
+  ],
+  "matches2": [
+    "function renderManageMembersList(",
+    "function renderEditExpenseSplits(",
+    "function renderSelectedTemplateInEditor(",
+    "function renderDashboard(",
+    "function renderDashboardRecentList(",
+    "function renderDashboardCharts(",
+    "function renderAllExpenses(",
+    "function renderCorrectionSplits(",
+    "function renderSplitEngineMembers(",
+    "function renderGroups(",
+    "function renderSettleUp(",
+    "function renderAnalytics(",
+    "function renderAnalyticsChartsData(",
+    "function renderAnalyticsCharts("
+  ]
+}

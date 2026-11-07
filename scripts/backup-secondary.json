@@ -1,0 +1,122 @@
+[
+  {
+    "line": 35,
+    "text": "\"secondary-container\": \"#e0e7ff\","
+  },
+  {
+    "line": 37,
+    "text": "\"on-secondary-container\": \"#312e81\","
+  },
+  {
+    "line": 527,
+    "text": "<body class=\"bg-surface font-sans text-on-surface antialiased selection:bg-secondary-container selection:text-on-secondary-container\">"
+  },
+  {
+    "line": 647,
+    "text": "<span class=\"px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-secondary-container text-on-secondary-container text-[11px] sm:text-xs font-bold\">"
+  },
+  {
+    "line": 796,
+    "text": "<a href=\"javascript:void(0)\" onclick=\"navigateTo('dashboard')\" data-nav=\"dashboard\" class=\"nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all bg-secondary-container text-on-secondary-container sidebar-collapsed-center\" title=\"Dashboard\">"
+  },
+  {
+    "line": 902,
+    "text": "<button onclick=\"navigateTo('settle')\" class=\"hidden sm:flex items-center gap-1.5 bg-secondary-container hover:bg-secondary-fixed text-on-secondary-container px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm\">"
+  },
+  {
+    "line": 988,
+    "text": "<span id=\"dashNetBadge\" class=\"px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-wider\">"
+  },
+  {
+    "line": 1053,
+    "text": "<button onclick=\"filterDashboardFeed('all')\" class=\"dash-filter active px-3 py-1 rounded-lg text-xs font-semibold bg-secondary-container text-on-secondary-container\">All</button>"
+  },
+  {
+    "line": 1213,
+    "text": "<div id=\"addExpenseSuccessAlert\" class=\"hidden p-4 rounded-xl bg-secondary-container text-on-secondary-container text-xs font-semibold flex items-center justify-between border border-primary/20 shadow-sm\">"
+  },
+  {
+    "line": 1218,
+    "text": "<button type=\"button\" onclick=\"document.getElementById('addExpenseSuccessAlert').classList.add('hidden')\" class=\"text-on-secondary-container hover:opacity-75\">"
+  },
+  {
+    "line": 1252,
+    "text": "<div id=\"splitStatusBadgeContainer\" class=\"flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container\">"
+  },
+  {
+    "line": 1336,
+    "text": "<span class=\"text-[11px] px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-semibold\">Group-Wise Gated</span>"
+  },
+  {
+    "line": 1499,
+    "text": "<div id=\"settleSuccessAlert\" class=\"hidden p-4 rounded-xl bg-secondary-container text-on-secondary-container text-xs font-semibold flex items-center justify-between border border-primary/20 shadow-sm\">"
+  },
+  {
+    "line": 1504,
+    "text": "<button type=\"button\" onclick=\"document.getElementById('settleSuccessAlert').classList.add('hidden')\" class=\"text-on-secondary-container hover:opacity-75\">"
+  },
+  {
+    "line": 2227,
+    "text": "<div class=\"w-9 h-9 rounded-xl bg-secondary-container text-on-secondary-container flex items-center justify-center\">"
+  },
+  {
+    "line": 4877,
+    "text": "el.className += ' bg-secondary-container text-on-secondary-container border-primary/20';"
+  },
+  {
+    "line": 5311,
+    "text": "el.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'font-semibold');"
+  },
+  {
+    "line": 5320,
+    "text": "targetNav.classList.add('bg-secondary-container', 'text-on-secondary-container', 'font-semibold');"
+  },
+  {
+    "line": 5368,
+    "text": "netBadge.className = 'px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase';"
+  },
+  {
+    "line": 5411,
+    "text": "<div class=\"w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container font-bold text-xs flex items-center justify-center flex-shrink-0\">${peer.avatar_initials || 'U'}</div>"
+  },
+  {
+    "line": 5418,
+    "text": "<button onclick=\"copyReminderText('${peer.name}', ${peer.amount})\" class=\"px-2.5 py-1 rounded-lg bg-secondary-container hover:bg-secondary-fixed text-on-secondary-container font-bold text-xs transition-colors\">"
+  },
+  {
+    "line": 5544,
+    "text": "<div class=\"w-9 h-9 rounded-xl bg-secondary-container/60 text-primary flex items-center justify-center flex-shrink-0\">"
+  },
+  {
+    "line": 5570,
+    "text": "event.target.className = 'dash-filter active px-3 py-1 rounded-lg text-xs font-semibold bg-secondary-container text-on-secondary-container';"
+  },
+  {
+    "line": 5672,
+    "text": "<span class=\"px-2 py-0.5 rounded text-[10px] sm:text-[11px] bg-secondary-container text-on-secondary-container font-semibold\">${exp.group_name || 'Group'}</span>"
+  },
+  {
+    "line": 5703,
+    "text": "<button onclick=\"openExpenseReminderModal(${exp.id})\" title=\"Send Email Reminder with Event Link\" class=\"p-2 rounded-lg text-on-surface-variant hover:bg-secondary-container hover:text-primary transition-colors flex items-center justify-center\">"
+  },
+  {
+    "line": 6368,
+    "text": "container.className = 'flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container';"
+  },
+  {
+    "line": 6600,
+    "text": "alertBox.className = 'p-3 rounded-xl text-xs font-semibold flex items-center gap-2 border bg-secondary-container text-on-secondary-container border-secondary/30';"
+  },
+  {
+    "line": 7549,
+    "text": "<div class=\"w-9 h-9 rounded-xl ${c.type === 'group' ? 'bg-secondary-container text-on-secondary-container' : 'bg-primary/20 text-primary'} font-bold flex items-center justify-center flex-shrink-0 text-xs shadow-xs\">"
+  },
+  {
+    "line": 7646,
+    "text": "<div class=\"w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container font-bold text-[10px] flex items-center justify-center flex-shrink-0\">"
+  },
+  {
+    "line": 7871,
+    "text": "alertBox.className = 'p-3 rounded-xl text-xs font-semibold flex items-center gap-2 border bg-secondary-container text-on-secondary-container border-secondary/30';"
+  }
+]

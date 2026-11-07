@@ -1,0 +1,33 @@
+rCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
+            if (upiEl) upiEl.innerText = receiverUpi;
+
+            // 2. Reset UI card visibilities
+            const pStation = document.getElementById('upiProcessingStation');
+            const sCard = document.getElementById('upiSuccessConfirmationCard');
+            const fCard = document.getElementById('upiFailedConfirmationCard');
+            const nStation = document.getElementById('nonUpiStation');
+            const successAlert = document.getElementById('settleSuccessAlert');
+            if (pStation) pStation.classList.remove('hidden');
+            if (sCard) sCard.classList.add('hidden');
+            if (fCard) fCard.classList.add('hidden');
+            if (nStation) nStation.classList.add('hidden');
+            if (successAlert) successAlert.classList.add('hidden');
+
+            // 3. Initialize fresh payment session with UPI default
+            setPaymentMethod('UPI');
+            navigateTo('settle');
+        }
+
+        function setPaymentMethod(method) {
+            const normMethod = (method || 'UPI').toUpperCase();
+            currentPaymentMethod = normMethod;
+
+            // Always abort previous polling to prevent background intervals
+            if (upiStatusPollInterval) {
+                clearInterval(upiStatusPollInterval);
+                upiStatusPollInterval = null;
+            }
+
+            const bU = document.getElementById('pmBtnUPI');
+            const bC = document.getElementById('pmBtnCash');
+      

@@ -1,0 +1,15 @@
+/api/admin/errors/:id/resolve', requireMasterAdmin, async (req, res) => {
+    try {
+        const { status, resolution_notes } = req.body;
+        const result = await adminService.updateErrorStatus(req.params.id, status, resolution_notes, req.adminUser.name);
+        
+        // Log in admin audit
+        await pool.query(`
+            INSERT INTO admin_audit_logs (admin_id, admin_email, action, target_type, target_id, details)
+            VALUES ($1, $2, 'ERROR_STATUS_UPDATED', 'SYSTEM_ERROR', $3, $4)
+        `, [req.adminUser.id, req.adminUser.email, req.params.id, JSON.stringify({ status, resolution_notes })]);
+
+        res.json({ success: true, error: result });
+    } catch (err) {
+        console.error('[Admin API] Error updating error status:', err);
+        res.status(400).json({ e

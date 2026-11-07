@@ -1,0 +1,46 @@
+/api/upi/payment-status/:requestId', async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const result = await pool.query(`
+            SELECT upr.*, 
+                   p.name as payer_name, 
+                   r.name as receiver_name,
+                   s.id as settlement_id,
+                   s.created_at as settlement_created_at
+            FROM upi_payment_requests upr
+            LEFT JOIN users p ON upr.payer_id = p.id
+            LEFT JOIN users r ON upr.receiver_id = r.id
+            LEFT JOIN settlements s ON upr.settlement_id = s.id
+            WHERE upr.request_id = $1
+        `, [requestId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Payment request not found' });
+        }
+
+        let pr = result.rows[0];
+
+        // 1. If already settled, return SUCCESS immediately
+        if (pr.status === 'SUCCESS' && pr.settlement_id) {
+            return res.json({
+                success: true,
+                request_id: pr.request_id,
+                status: 'SUCCESS',
+                amount: parseFloat(pr.amount),
+                currency: pr.currency,
+                payer_id: pr.payer_id,
+                payer_name: pr.payer_name,
+                receiver_id: pr.receiver_id,
+                receiver_name: pr.receiver_name,
+                receiver_upi: pr.upi_id,
+                transaction_ref: pr.transaction_ref,
+                utr: pr.utr,
+                settlement_id: pr.settlement_id,
+                settled_at: pr.settled_at,
+                created_at: pr.created_at,
+                provider_type: 'UPI_AUTO_SETTLED',
+                message: 'Payment verified and settled'
+            });
+        }
+
+        // 2. Automatic expiration check: If PENDING and older than 15 minute

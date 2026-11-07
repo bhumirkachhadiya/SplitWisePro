@@ -1,0 +1,28 @@
+function openSettleForPeer(userId, name, amount, upi, initials) {
+            selectedPeer = { id: userId, name, amount, upi, initials };
+
+            // 1. Immediately abort any existing polling and clear old transaction state
+            if (upiStatusPollInterval) {
+                clearInterval(upiStatusPollInterval);
+                upiStatusPollInterval = null;
+            }
+            currentUpiRequestId = null;
+            upiPollAttempts = 0;
+
+            const recNameEl = document.getElementById('settleReceiverName');
+            const recAvEl = document.getElementById('settleReceiverAvatar');
+            const amtEl = document.getElementById('settleAmountInput');
+            const upiEl = document.getElementById('settleDisplayUpi');
+
+            if (recNameEl) recNameEl.innerText = name;
+            if (recAvEl) recAvEl.innerText = initials || 'U';
+            if (amtEl) amtEl.value = (amount && amount > 0) ? amount : '';
+            const receiverUpi = upi || `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
+            if (upiEl) upiEl.innerText = receiverUpi;
+
+            // 2. Reset UI card visibilities
+            const pStation = document.getElementById('upiProcessingStation');
+            const sCard = document.getElementById('upiSuccessConfirmationCard');
+            const fCard = document.getElementById('upiFailedConfirmationCard');
+            const nStation = document.getElementById('nonUpiStation');
+            const successAlert = document.getE
