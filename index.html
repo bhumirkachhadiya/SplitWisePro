@@ -969,9 +969,12 @@
                         <div class="px-3 pb-1 sidebar-text">
                             <span class="text-[10px] uppercase tracking-wider text-on-surface-variant/80 font-bold">Settlement & Insights</span>
                         </div>
-                        <a href="javascript:void(0)" onclick="navigateTo('settle')" data-nav="settle" class="nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all sidebar-collapsed-center" title="Settle Up">
-                            <span class="material-symbols-outlined text-[19px] flex-shrink-0">payments</span>
-                            <span class="sidebar-text">Settle Up</span>
+                        <a href="javascript:void(0)" onclick="navigateTo('settle')" data-nav="settle" class="nav-item flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all sidebar-collapsed-center" title="Settle Up">
+                            <span class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-[19px] flex-shrink-0">payments</span>
+                                <span class="sidebar-text">Settle Up</span>
+                            </span>
+                            <span id="settleRequestBadge" class="hidden px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-error text-white">0</span>
                         </a>
                         <a href="javascript:void(0)" onclick="navigateTo('analytics')" data-nav="analytics" class="nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all sidebar-collapsed-center" title="Analytics">
                             <span class="material-symbols-outlined text-[19px] flex-shrink-0">trending_up</span>
@@ -9977,6 +9980,12 @@
                 setCount('prCountReceived', counts.received_pending);
                 setCount('prCountSent', counts.sent_pending);
                 setCount('prCountHistory', counts.history);
+                const navBadge = document.getElementById('settleRequestBadge');
+                if (navBadge) {
+                    const pendingReceived = Number(counts.received_pending || 0);
+                    navBadge.innerText = pendingReceived;
+                    navBadge.classList.toggle('hidden', pendingReceived === 0);
+                }
                 renderPaymentRequests();
             } catch (e) {
                 list.innerHTML = '<div class="p-5 text-center text-xs text-error font-semibold">Connection error while loading payment requests.</div>';
