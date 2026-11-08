@@ -1396,7 +1396,7 @@ app.put('/api/users/:id', async (req, res) => {
 // ==========================================
 
 // Public Health & System Diagnostics
-app.get('/api/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
@@ -10228,6 +10228,7 @@ app.use(async (err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`✓ SplitEase Server active on http://localhost:${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+    console.log(`✓ SplitEase Server active on http://${HOST}:${PORT}`);
 });
