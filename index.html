@@ -6352,6 +6352,7 @@
             if (chatbotMsgContainer) chatbotMsgContainer.innerHTML = '';
 
             // Clear chat conversations & messages client-side state
+            if (typeof stopChatPolling === 'function') stopChatPolling();
             currentActiveConversationId = null;
             activeChatMessages = [];
             activeConversations = [];
@@ -8732,6 +8733,7 @@
                 loadActivityFeed();
             } else if (viewName === 'chat') {
                 loadChatConversations();
+                if (typeof startChatPolling === 'function') startChatPolling();
             } else if (viewName === 'friends') {
                 loadFriendsData();
             } else if (viewName === 'settle') {
@@ -8742,6 +8744,10 @@
                 if (typeof onExpenseGroupChange === 'function') onExpenseGroupChange();
             } else if (viewName === 'master-admin') {
                 if (typeof switchAdminTab === 'function') switchAdminTab('overview');
+            }
+
+            if (viewName !== 'chat' && typeof stopChatPolling === 'function') {
+                stopChatPolling();
             }
 
             setTimeout(() => { if (typeof TopProgressBar !== 'undefined') TopProgressBar.finish(); }, 180);
@@ -13802,6 +13808,27 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function startChatPolling() {
+            stopChatPolling();
+            chatPollingTimer = setInterval(async () => {
+                const chatPanel = document.getElementById('view-chat');
+                if (!chatPanel || chatPanel.classList.contains('hidden') || !currentUser) {
+                    stopChatPolling();
+                    return;
+                }
+                if (currentActiveConversationId) {
+                    await loadActiveConversationMessages(currentActiveConversationId, true);
+                }
+            }, 3500);
+        }
+
+        function stopChatPolling() {
+            if (chatPollingTimer) {
+                clearInterval(chatPollingTimer);
+                chatPollingTimer = null;
+            }
+        }
+
         async function updateChatUnreadBadge() {
             if (!currentUser) {
                 const badge = document.getElementById('chatSidebarBadge');
@@ -13814,13 +13841,14 @@
                 });
                 if (!res.ok) return;
                 const data = await res.json();
-                const unread = data.unread || 0;
+                const unread = data.unread_count ?? data.unread ?? 0;
                 const badge = document.getElementById('chatSidebarBadge');
                 if (badge) {
                     if (unread > 0) {
                         badge.innerText = unread > 99 ? '99+' : unread;
                         badge.classList.remove('hidden');
                     } else {
+                        badge.innerText = '0';
                         badge.classList.add('hidden');
                     }
                 }
@@ -13868,7 +13896,10 @@
 
             container.innerHTML = filteredConversations.map(c => {
                 const isSelected = currentActiveConversationId === c.id;
-                const unreadBadge = (c.unread_count && c.unread_count > 0)
+                if (isSelected) {
+                    c.unread_count = 0;
+                }
+                const unreadBadge = (!isSelected && c.unread_count && c.unread_count > 0)
                     ? `<span class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">${c.unread_count}</span>`
                     : '';
                 const lastTime = (c.last_message && c.last_message.created_at)
@@ -13941,7 +13972,14 @@
                 }
                 const data = await res.json();
                 activeConversations = data.conversations || [];
+                if (currentActiveConversationId) {
+                    const activeC = activeConversations.find(c => c.id === currentActiveConversationId);
+                    if (activeC) {
+                        activeC.unread_count = 0;
+                    }
+                }
                 renderChatConversationsList();
+                await updateChatUnreadBadge();
             } catch (e) {
                 console.error('Failed to load conversations:', e);
                 container.innerHTML = `<div class="p-4 text-xs text-error text-center">Failed to load conversations</div>`;
@@ -14051,6 +14089,12 @@
             if (!currentUser) return;
             currentActiveConversationId = convId;
             const conv = activeConversations.find(c => c.id === convId);
+            if (conv) {
+                conv.unread_count = 0;
+            }
+
+            // Immediately clear badge and update active selection in conversations list
+            renderChatConversationsList();
 
             // Responsive mobile panel switch
             const listPanel = document.getElementById('chatConversationsPanel');
@@ -14098,6 +14142,7 @@
                 threadPanel.classList.add('hidden', 'lg:flex');
             }
             currentActiveConversationId = null;
+            renderChatConversationsList();
         }
 
         function formatFileSize(bytes) {
@@ -14108,12 +14153,12 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
-        async function loadActiveConversationMessages(convId) {
+        async function loadActiveConversationMessages(convId, isBackgroundPoll = false) {
             if (!currentUser || !convId) return;
             const msgArea = document.getElementById('activeChatMessagesArea');
             if (!msgArea) return;
 
-            if ((!activeChatMessages || activeChatMessages.length === 0)) {
+            if (!isBackgroundPoll && (!activeChatMessages || activeChatMessages.length === 0)) {
                 msgArea.innerHTML = `
                     <div class="p-6 space-y-4">
                         <div class="flex items-start gap-3 max-w-[70%]">
@@ -14145,7 +14190,19 @@
                     return;
                 }
                 const data = await res.json();
-                activeChatMessages = data.messages || [];
+                const fetchedMessages = data.messages || [];
+
+                if (isBackgroundPoll) {
+                    const newCount = fetchedMessages.length;
+                    const lastId = newCount > 0 ? fetchedMessages[newCount - 1].id : null;
+                    const prevCount = activeChatMessages.length;
+                    const prevLastId = prevCount > 0 ? activeChatMessages[prevCount - 1].id : null;
+                    if (newCount === prevCount && lastId === prevLastId) {
+                        return; // No message change, preserve current scroll and state
+                    }
+                }
+
+                activeChatMessages = fetchedMessages;
 
                 if (activeChatMessages.length === 0) {
                     msgArea.innerHTML = `
@@ -14242,6 +14299,14 @@
 
                 // Auto-scroll to bottom
                 msgArea.scrollTop = msgArea.scrollHeight;
+
+                // Ensure active conversation unread count is zeroed out and badges updated
+                const activeC = activeConversations.find(c => c.id === convId);
+                if (activeC && activeC.unread_count > 0) {
+                    activeC.unread_count = 0;
+                    renderChatConversationsList();
+                    updateChatUnreadBadge();
+                }
             } catch (e) {
                 console.error('Failed to load active messages:', e);
             }

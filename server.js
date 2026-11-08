@@ -8033,13 +8033,13 @@ app.post('/api/chat/conversations/:id/read', async (req, res) => {
             return res.status(access.status).json({ error: access.error, code: access.code });
         }
 
-        await pool.query(`
+        const updateRes = await pool.query(`
             UPDATE chat_messages 
             SET is_read = TRUE, read_at = COALESCE(read_at, NOW())
-            WHERE conversation_id = $1 AND sender_id != $2 AND is_read = FALSE
+            WHERE conversation_id = $1 AND sender_id != $2 AND (is_read = FALSE OR read_at IS NULL)
         `, [convId, user.id]);
 
-        res.json({ success: true, message: 'Messages marked as read.' });
+        res.json({ success: true, marked_count: updateRes.rowCount, message: 'Messages marked as read.' });
     } catch (err) {
         console.error('Error marking messages as read:', err);
         res.status(500).json({ error: formatUserError(err, 'Failed to mark messages as read.') });
@@ -8161,7 +8161,8 @@ app.get('/api/chat/unread-count', async (req, res) => {
             WHERE cm.user_id = $1 AND m.sender_id != $1 AND m.is_read = FALSE
         `, [user.id]);
 
-        res.json({ unread_count: countRes.rows[0].unread_count || 0 });
+        const count = countRes.rows[0].unread_count || 0;
+        res.json({ unread_count: count, unread: count });
     } catch (err) {
         console.error('Error fetching unread count:', err);
         res.status(500).json({ error: formatUserError(err, 'Unable to fetch unread count.') });
