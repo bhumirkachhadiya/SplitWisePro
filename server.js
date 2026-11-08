@@ -1,3 +1,8 @@
+const dns = require('dns');
+if (dns && typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
@@ -1384,7 +1389,7 @@ app.get('/api/system/diagnostic', async (req, res) => {
 
     res.json({
         app: 'SplitWisePro',
-        version: '1.0.3',
+        version: '1.0.4',
         time: new Date().toISOString(),
         node: process.version,
         database: {

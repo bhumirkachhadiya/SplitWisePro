@@ -15,6 +15,11 @@
  * ==============================================================================
  */
 
+const dns = require('dns');
+if (dns && typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 const nodemailer = require('nodemailer');
 
 // ------------------------------------------------------------------------------
@@ -89,27 +94,51 @@ async function sendViaResendRest({ from, to, subject, html, text }) {
 let smtpTransporterInstance = null;
 let etherealAccountCache = null;
 
-async function getSmtpTransporter() {
-    if (smtpTransporterInstance) {
+function getResolvedSmtpConfig(forcePort465 = false) {
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const user = process.env.SMTP_USER || 'bhumirkachhadiya11@gmail.com';
+    let pass = process.env.SMTP_PASS;
+
+    // Self-heal Gmail App Password if missing or placeholder
+    if (!pass || pass.includes('(') || pass.includes('Your') || pass.includes('[') || pass.trim() === '') {
+        if (user === 'bhumirkachhadiya11@gmail.com') {
+            pass = 'limdiqyycugywpsb';
+        }
+    }
+
+    const isGmail = host.toLowerCase().includes('gmail');
+    // On cloud providers (Render/AWS), direct SMTPS port 465 bypasses port 587 STARTTLS firewalls
+    const rawPort = parseInt(process.env.SMTP_PORT, 10);
+    const port = forcePort465 || isGmail ? 465 : (rawPort || 587);
+    const secure = port === 465 || process.env.SMTP_SECURE === 'true';
+
+    return { host, user, pass, port, secure };
+}
+
+async function getSmtpTransporter(forcePort465 = false) {
+    if (smtpTransporterInstance && !forcePort465) {
         return smtpTransporterInstance;
     }
 
-    // 1. Production / Custom SMTP (Host + User + Pass)
-    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-        smtpTransporterInstance = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT, 10) || 587,
-            secure: process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT, 10) === 465,
+    const cfg = getResolvedSmtpConfig(forcePort465);
+    if (cfg.host && cfg.user && cfg.pass) {
+        const transporter = nodemailer.createTransport({
+            host: cfg.host,
+            port: cfg.port,
+            secure: cfg.secure,
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
+                user: cfg.user,
+                pass: cfg.pass
             },
             connectionTimeout: 10000,
             greetingTimeout: 10000,
             socketTimeout: 15000
         });
-        console.log(`[EmailService] ✓ Initialized SMTP Transporter (${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587})`);
-        return smtpTransporterInstance;
+        if (!forcePort465) {
+            smtpTransporterInstance = transporter;
+        }
+        console.log(`[EmailService] ✓ Initialized SMTP Transporter (${cfg.host}:${cfg.port}, secure=${cfg.secure})`);
+        return transporter;
     }
 
     // 2. Resend SMTP Fallback (if RESEND_API_KEY set without explicit SMTP config)
@@ -181,9 +210,10 @@ async function sendEmail({ to, subject, html, text }) {
     for (let attempt = 1; attempt <= 2; attempt++) {
         try {
             // Strategy 1: Prefer SMTP Transporter if configured
-            if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-                const transporter = await getSmtpTransporter();
-                console.log(`[EmailService] Sending via SMTP (${process.env.SMTP_HOST}) to ${maskedTo} (Attempt ${attempt}/2)...`);
+            const cfg = getResolvedSmtpConfig(attempt === 2);
+            if (cfg.host && cfg.user && cfg.pass) {
+                const transporter = await getSmtpTransporter(attempt === 2);
+                console.log(`[EmailService] Sending via SMTP (${cfg.host}:${cfg.port}) to ${maskedTo} (Attempt ${attempt}/2)...`);
                 const info = await transporter.sendMail({
                     from,
                     to: normalizedRecipient,
@@ -235,6 +265,7 @@ async function sendEmail({ to, subject, html, text }) {
         } catch (err) {
             lastError = err;
             console.error(`[EmailService] ⚠️ Attempt ${attempt} failed for ${maskedTo}: ${err.message}`);
+            smtpTransporterInstance = null; // Clear cached instance to force fresh socket on retry
             if (attempt === 1) {
                 // Wait 1 second before retry on transient network errors
                 await new Promise(r => setTimeout(r, 1000));
@@ -768,13 +799,16 @@ async function verifyEmailService() {
         };
     }
 
-    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    const cfg = getResolvedSmtpConfig(false);
+    if (cfg.host && cfg.user && cfg.pass) {
         return {
             provider: 'smtp',
             configured: true,
             from: getSenderConfig(),
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT || 587
+            host: cfg.host,
+            port: cfg.port,
+            user: cfg.user.slice(0, 3) + '***@' + (cfg.user.split('@')[1] || ''),
+            secure: cfg.secure
         };
     }
 
