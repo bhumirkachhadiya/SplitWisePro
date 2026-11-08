@@ -43,10 +43,11 @@ function getAiAssistantDrawerHtml() {
                 <span id="voiceStatusPill" class="hidden text-[9px] font-mono font-bold text-emerald-500 px-1 py-0.2 bg-emerald-500/10 rounded">Auto-Send</span>
 
                 <!-- Language Selector -->
-                <select onchange="setChatbotLang(this.value)" class="text-[10px] font-mono bg-surface-container border border-outline-variant rounded-md px-1.5 py-0.5 text-on-surface focus:outline-none">
-                    <option value="en-IN">EN</option>
-                    <option value="hi-IN">HI</option>
-                    <option value="gu-IN">GU</option>
+                <select id="chatbotLangSelector" onchange="setChatbotLang(this.value)" class="text-[10px] font-mono bg-surface-container border border-outline-variant rounded-md px-1.5 py-0.5 text-on-surface focus:outline-none" title="Choose Voice Recognition & Response Language">
+                    <option value="auto">🌐 Auto / Hinglish / Gujlish</option>
+                    <option value="en-IN" selected>🇬🇧 EN (English)</option>
+                    <option value="hi-IN">🇮🇳 HI (हिंदी)</option>
+                    <option value="gu-IN">🇮🇳 GU (ગુજરાતી)</option>
                 </select>
 
                 <!-- Speech Stop Button -->

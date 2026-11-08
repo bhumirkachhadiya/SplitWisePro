@@ -24,6 +24,8 @@ const adminService = require('./adminService');
 const authService = require('./authService');
 const splitEngine = require('./splitEngine');
 const { calculateSmartCustomSplits, distributeDeterministically } = require('./smartCustomSplitService');
+const { detectLanguage, extractSpokenAmount, matchUserAcrossScripts, generateSpokenText } = require('./multilingualVoiceEngine');
+const { processVoiceAssistantQuery } = require('./voiceConversationEngine');
 
 // ------------------------------------------------------------------------------
 // CORS: same-origin plus explicitly configured origins only
@@ -167,14 +169,28 @@ async function requireGroupRole(req, res, groupId) {
 async function computeGroupNetForUser(groupId, userId, db = pool) {
     const r = await db.query(`
         SELECT
-            COALESCE(SUM(CASE WHEN e.paid_by = $2 AND es.user_id <> $2
-                              THEN es.base_amount - es.settled_amount_base ELSE 0 END), 0)
-          - COALESCE(SUM(CASE WHEN es.user_id = $2 AND e.paid_by <> $2
-                              THEN es.base_amount - es.settled_amount_base ELSE 0 END), 0) AS net
-        FROM expense_splits es
-        JOIN expenses e ON e.id = es.expense_id
-        WHERE e.group_id = $1
-          AND (es.base_amount - es.settled_amount_base) > 0.005
+            COALESCE((
+                SELECT SUM(ep.amount)
+                FROM expense_payers ep
+                JOIN expenses e ON ep.expense_id = e.id
+                WHERE e.group_id = $1 AND ep.user_id = $2
+            ), 0)
+          - COALESCE((
+                SELECT SUM(es.base_amount)
+                FROM expense_splits es
+                JOIN expenses e ON es.expense_id = e.id
+                WHERE e.group_id = $1 AND es.user_id = $2
+            ), 0)
+          + COALESCE((
+                SELECT SUM(s.amount)
+                FROM settlements s
+                WHERE s.group_id = $1 AND s.payer_id = $2
+            ), 0)
+          - COALESCE((
+                SELECT SUM(s.amount)
+                FROM settlements s
+                WHERE s.group_id = $1 AND s.receiver_id = $2
+            ), 0) AS net
     `, [groupId, userId]);
     return Math.round((parseFloat(r.rows[0].net) || 0) * 100) / 100;
 }
@@ -256,9 +272,10 @@ async function applyPaymentToSplits(db, { payerId, receiverId, amount, groupId =
         SELECT es.id, es.amount, es.base_amount, es.settled_amount, es.settled_amount_base
         FROM expense_splits es
         JOIN expenses e ON e.id = es.expense_id
+        JOIN expense_payers ep ON ep.expense_id = e.id
         WHERE es.user_id = $1
-          AND e.paid_by = $2
-          AND es.user_id <> e.paid_by
+          AND ep.user_id = $2
+          AND es.user_id <> ep.user_id
           AND (es.base_amount - es.settled_amount_base) > 0.005
           ${filters}
         ORDER BY e.expense_date ASC, es.id ASC
@@ -341,8 +358,22 @@ async function initEmailVerificationTables() {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             );
             CREATE INDEX IF NOT EXISTS idx_ai_actions_user ON ai_agent_actions(user_id, created_at DESC);
+            CREATE TABLE IF NOT EXISTS public.expense_payers (
+                id SERIAL PRIMARY KEY,
+                expense_id INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                UNIQUE(expense_id, user_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_expense_payers_expense_id ON expense_payers(expense_id);
+            CREATE INDEX IF NOT EXISTS idx_expense_payers_user_id ON expense_payers(user_id);
+            INSERT INTO expense_payers (expense_id, user_id, amount)
+            SELECT id, paid_by, amount FROM expenses
+            WHERE paid_by IS NOT NULL
+            ON CONFLICT (expense_id, user_id) DO NOTHING;
         `);
-        console.log('✓ Email OTP Verification and AI Agent Actions Database Schema Ready');
+        console.log('✓ Email OTP, AI Actions, and Multi-Payer Database Schema Ready');
     } catch (err) {
         console.error('Error creating email_verifications table:', err);
     }
@@ -2218,24 +2249,44 @@ const getBalancesHandler = async (req, res) => {
         const balances = {};
         membersRes.rows.forEach(m => { balances[m.user_id] = 0; });
 
-        // Outstanding = split amount minus whatever has already been paid.
-        // settled_amount is the single source of truth, so partial payments are
-        // reflected immediately and no amount is ever double counted.
-        const outstandingRes = await pool.query(`
-            SELECT es.user_id AS debtor, e.paid_by AS creditor,
-                   SUM(es.base_amount - es.settled_amount_base) AS outstanding
-            FROM expense_splits es
-            JOIN expenses e ON es.expense_id = e.id
-            WHERE e.group_id = $1
-              AND es.user_id <> e.paid_by
-              AND (es.base_amount - es.settled_amount_base) > 0.005
-            GROUP BY es.user_id, e.paid_by
+        // Net balance for each circle member: Expenses Paid - Splits Owed + Settlements Paid - Settlements Received
+        const balancesRes = await pool.query(`
+            SELECT
+                u.id as user_id,
+                (COALESCE(p.paid_amt, 0) - COALESCE(o.owed_amt, 0) + COALESCE(sp.settled_paid, 0) - COALESCE(sr.settled_recv, 0)) as net_balance
+            FROM group_members gm
+            JOIN users u ON gm.user_id = u.id
+            LEFT JOIN (
+                SELECT ep.user_id, SUM(ep.amount) as paid_amt
+                FROM expense_payers ep
+                JOIN expenses e ON ep.expense_id = e.id
+                WHERE e.group_id = $1
+                GROUP BY ep.user_id
+            ) p ON p.user_id = u.id
+            LEFT JOIN (
+                SELECT es.user_id, SUM(es.base_amount) as owed_amt
+                FROM expense_splits es
+                JOIN expenses e ON es.expense_id = e.id
+                WHERE e.group_id = $1
+                GROUP BY es.user_id
+            ) o ON o.user_id = u.id
+            LEFT JOIN (
+                SELECT payer_id, SUM(amount) as settled_paid
+                FROM settlements
+                WHERE group_id = $1
+                GROUP BY payer_id
+            ) sp ON sp.payer_id = u.id
+            LEFT JOIN (
+                SELECT receiver_id, SUM(amount) as settled_recv
+                FROM settlements
+                WHERE group_id = $1
+                GROUP BY receiver_id
+            ) sr ON sr.receiver_id = u.id
+            WHERE gm.group_id = $1
         `, [groupId]);
 
-        outstandingRes.rows.forEach(r => {
-            const amt = parseFloat(r.outstanding) || 0;
-            if (balances[r.creditor] !== undefined) balances[r.creditor] += amt;
-            if (balances[r.debtor] !== undefined) balances[r.debtor] -= amt;
+        balancesRes.rows.forEach(r => {
+            balances[r.user_id] = Math.round((parseFloat(r.net_balance) || 0) * 100) / 100;
         });
 
         const usersRes = await pool.query('SELECT id, name, email, avatar_initials, upi_id FROM users');
@@ -3017,9 +3068,10 @@ app.get('/api/expenses', async (req, res) => {
         const expenseIds = expensesRes.rows.map(e => e.id);
         const splitsByExpense = new Map();
         const correctionsByExpense = new Map();
+        const payersByExpense = new Map();
 
         if (expenseIds.length > 0) {
-            const [allSplitsRes, allCorrectionsRes] = await Promise.all([
+            const [allSplitsRes, allCorrectionsRes, allPayersRes] = await Promise.all([
                 pool.query(`
                     SELECT es.*, u.name as user_name, u.avatar_initials 
                     FROM expense_splits es 
@@ -3031,6 +3083,13 @@ app.get('/api/expenses', async (req, res) => {
                     FROM expense_corrections
                     WHERE expense_id = ANY($1::int[])
                     GROUP BY expense_id
+                `, [expenseIds]),
+                pool.query(`
+                    SELECT ep.*, u.name as user_name, u.avatar_initials
+                    FROM expense_payers ep
+                    JOIN users u ON ep.user_id = u.id
+                    WHERE ep.expense_id = ANY($1::int[])
+                    ORDER BY ep.amount DESC
                 `, [expenseIds])
             ]);
             allSplitsRes.rows.forEach(row => {
@@ -3038,18 +3097,31 @@ app.get('/api/expenses', async (req, res) => {
                 splitsByExpense.get(row.expense_id).push({ ...row, amount: parseFloat(row.amount) });
             });
             allCorrectionsRes.rows.forEach(row => correctionsByExpense.set(row.expense_id, row.count));
+            allPayersRes.rows.forEach(row => {
+                if (!payersByExpense.has(row.expense_id)) payersByExpense.set(row.expense_id, []);
+                payersByExpense.get(row.expense_id).push({ ...row, amount: parseFloat(row.amount) });
+            });
         }
 
         // Build the response from the batched results (no per-expense queries).
         const expenses = expensesRes.rows.map(exp => {
             const splits = splitsByExpense.get(exp.id) || [];
-            const hasSettledSplits = splits.some(s => parseInt(s.user_id) !== parseInt(exp.paid_by) && (parseFloat(s.settled_amount || 0) > 0.005 || parseFloat(s.settled_amount_base || 0) > 0.005));
+            const payers = payersByExpense.get(exp.id) || (exp.paid_by ? [{ user_id: exp.paid_by, amount: parseFloat(exp.amount), user_name: exp.paid_by_name, avatar_initials: exp.paid_by_initials }] : []);
+            const isMultiPayer = payers.length > 1;
+            const paidByDisplay = isMultiPayer
+                ? payers.map(p => `${p.user_name} (₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })})`).join(', ')
+                : (exp.paid_by_name || 'User');
+            const payerUserIds = new Set(payers.map(p => parseInt(p.user_id)));
+            const hasSettledSplits = splits.some(s => !payerUserIds.has(parseInt(s.user_id)) && (parseFloat(s.settled_amount || 0) > 0.005 || parseFloat(s.settled_amount_base || 0) > 0.005));
             const hasCorrections = (correctionsByExpense.get(exp.id) || 0) > 0;
 
             return {
                 ...exp,
                 amount: parseFloat(exp.amount),
                 splits,
+                payers,
+                is_multi_payer: isMultiPayer,
+                paid_by_display: paidByDisplay,
                 is_protected: hasSettledSplits || hasCorrections,
                 has_settled_splits: hasSettledSplits,
                 has_corrections: hasCorrections
@@ -3071,6 +3143,7 @@ app.post('/api/expenses', async (req, res) => {
             group_id,
             event_id,
             paid_by,
+            payers,
             created_by,
             amount,
             currency = 'INR',
@@ -3146,10 +3219,39 @@ app.post('/api/expenses', async (req, res) => {
             });
         }
 
-        if (!groupMemberMap.has(parseInt(paid_by))) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ error: 'Selected payer must be an enrolled member of this group' });
+        let normalizedPayers = [];
+        if (Array.isArray(payers) && payers.length > 0) {
+            let sumPayers = 0;
+            for (const p of payers) {
+                const pUid = parseInt(p.user_id !== undefined ? p.user_id : (p.id !== undefined ? p.id : p.userId));
+                const pAmt = roundMoney(parseFloat(p.amount) || 0);
+                if (!groupMemberMap.has(pUid)) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'All payers must be enrolled members of the selected circle.' });
+                }
+                if (pAmt <= 0) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Each payer must have contributed an amount greater than zero.' });
+                }
+                normalizedPayers.push({ user_id: pUid, amount: pAmt });
+                sumPayers = roundMoney(sumPayers + pAmt);
+            }
+            if (Math.abs(sumPayers - totalAmount) > 0.05) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ 
+                    error: `The sum of payer amounts (₹${sumPayers.toFixed(2)}) must equal the total expense amount (₹${totalAmount.toFixed(2)}).` 
+                });
+            }
+        } else {
+            const singlePayerId = parseInt(paid_by);
+            if (!singlePayerId || !groupMemberMap.has(singlePayerId)) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Selected payer must be an enrolled member of this group' });
+            }
+            normalizedPayers.push({ user_id: singlePayerId, amount: totalAmount });
         }
+
+        const effectivePrimaryPayer = normalizedPayers.slice().sort((a, b) => b.amount - a.amount)[0].user_id;
 
         // Normalise participants through the unified split engine. The engine
         // recomputes amounts server-side so the total always matches exactly.
@@ -3214,9 +3316,19 @@ app.post('/api/expenses', async (req, res) => {
                 group_id, paid_by, amount, currency, description, category, split_type, notes, receipt_url, expense_date,
                 original_amount, exchange_rate, converted_amount, rate_provider, rate_timestamp
              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
-            [effectiveGroupId, paid_by, totalAmount, expCurrency, expDesc, sanitizeText(category, 50) || 'General', effectiveSplitType, sanitizeText(notes, 2000), sanitizeText(receipt_url, 1000), expense_date, originalAmount, exchangeRate, convertedAmount, rateProvider, rateTimestamp]
+            [effectiveGroupId, effectivePrimaryPayer, totalAmount, expCurrency, expDesc, sanitizeText(category, 50) || 'General', effectiveSplitType, sanitizeText(notes, 2000), sanitizeText(receipt_url, 1000), expense_date, originalAmount, exchangeRate, convertedAmount, rateProvider, rateTimestamp]
         );
         const expenseId = expRes.rows[0].id;
+
+        // Record all payers in expense_payers
+        for (const p of normalizedPayers) {
+            await client.query(
+                `INSERT INTO expense_payers (expense_id, user_id, amount)
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (expense_id, user_id) DO UPDATE SET amount = EXCLUDED.amount`,
+                [expenseId, p.user_id, p.amount]
+            );
+        }
 
         // Process Splits in the expense currency, plus the exact base-currency
         // equivalent used by every ledger screen.
@@ -3236,15 +3348,21 @@ app.post('/api/expenses', async (req, res) => {
         }
 
         // Payer name for activity log
-        const payerRes = await client.query('SELECT name FROM users WHERE id = $1', [paid_by]);
-        const payerName = payerRes.rows[0]?.name || 'A user';
+        const isMultiPayer = normalizedPayers.length > 1;
+        const payerNamesRes = await client.query('SELECT id, name FROM users WHERE id = ANY($1::int[])', [normalizedPayers.map(p => p.user_id)]);
+        const pMap = {};
+        payerNamesRes.rows.forEach(u => pMap[u.id] = u.name);
+        const payerDisplay = isMultiPayer 
+            ? normalizedPayers.map(p => `${pMap[p.user_id] || 'User'} (₹${p.amount})`).join(' & ')
+            : (pMap[effectivePrimaryPayer] || 'A user');
+
         const groupRes = await client.query('SELECT name FROM groups WHERE id = $1', [effectiveGroupId]);
         const groupName = groupRes.rows[0]?.name || 'Group';
 
         await client.query(
             `INSERT INTO activity_logs (user_id, group_id, activity_type, message) 
              VALUES ($1, $2, 'EXPENSE_ADDED', $3 || ' added "' || $4 || '" (₹' || $5 || ') in ' || $6)`,
-            [paid_by, effectiveGroupId, payerName, expDesc, totalAmount.toFixed(2), groupName]
+            [effectivePrimaryPayer, effectiveGroupId, payerDisplay, expDesc, totalAmount.toFixed(2), groupName]
         );
 
         await client.query('COMMIT');
@@ -3426,23 +3544,39 @@ app.get('/api/expenses/:id', async (req, res) => {
         if (expRes.rows.length === 0) {
             return res.status(404).json({ error: 'Expense not found.' });
         }
-
         const expense = expRes.rows[0];
-        const splitsRes = await pool.query(`
-            SELECT es.*, u.name as user_name, u.avatar_initials, u.upi_id
-            FROM expense_splits es
-            JOIN users u ON es.user_id = u.id
-            WHERE es.expense_id = $1
-            ORDER BY es.id ASC
-        `, [expenseId]);
 
-        const hasSettledSplits = splitsRes.rows.some(s => parseInt(s.user_id) !== parseInt(expense.paid_by) && (parseFloat(s.settled_amount || 0) > 0.005 || parseFloat(s.settled_amount_base || 0) > 0.005));
+        const [splitsRes, payersRes] = await Promise.all([
+            pool.query(`
+                SELECT es.*, u.name as user_name, u.avatar_initials, u.upi_id
+                FROM expense_splits es
+                JOIN users u ON es.user_id = u.id
+                WHERE es.expense_id = $1
+                ORDER BY es.id ASC
+            `, [expenseId]),
+            pool.query(`
+                SELECT ep.*, u.name as user_name, u.avatar_initials, u.upi_id
+                FROM expense_payers ep
+                JOIN users u ON ep.user_id = u.id
+                WHERE ep.expense_id = $1
+                ORDER BY ep.amount DESC
+            `, [expenseId])
+        ]);
+
+        const payers = payersRes.rows.map(p => ({ ...p, amount: parseFloat(p.amount) }));
+        const isMultiPayer = payers.length > 1;
+        const payerUserIds = new Set(payers.map(p => parseInt(p.user_id)));
+        const paidByDisplay = isMultiPayer
+            ? payers.map(p => `${p.user_name} (₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })})`).join(', ')
+            : (expense.paid_by_name || 'User');
+
+        const hasSettledSplits = splitsRes.rows.some(s => !payerUserIds.has(parseInt(s.user_id)) && (parseFloat(s.settled_amount || 0) > 0.005 || parseFloat(s.settled_amount_base || 0) > 0.005));
 
         // Object-level authorization: only a member of the expense's circle or an
         // actual participant may read its details.
         const authId = actingUserId(req);
         const groupRole = expense.group_id ? await getGroupRole(expense.group_id, authId) : null;
-        const isParticipant = parseInt(expense.paid_by) === authId ||
+        const isParticipant = payerUserIds.has(authId) || parseInt(expense.paid_by) === authId ||
             splitsRes.rows.some(s => parseInt(s.user_id) === authId);
         if (!groupRole && !isParticipant && (!req.authUser || req.authUser.role !== 'master_admin')) {
             return res.status(403).json({ error: 'Access denied: this expense belongs to a circle you are not part of.' });
@@ -3451,6 +3585,9 @@ app.get('/api/expenses/:id', async (req, res) => {
         res.json({
             ...expense,
             amount: parseFloat(expense.amount),
+            payers,
+            is_multi_payer: isMultiPayer,
+            paid_by_display: paidByDisplay,
             has_settled_splits: hasSettledSplits,
             is_protected: hasSettledSplits,
             splits: splitsRes.rows.map(s => ({
@@ -3475,6 +3612,7 @@ app.put('/api/expenses/:id', async (req, res) => {
             title,
             amount,
             paid_by,
+            payers,
             category,
             split_type = 'equal',
             notes = '',
@@ -3547,30 +3685,62 @@ app.put('/api/expenses/:id', async (req, res) => {
             });
         }
 
+        let effectiveSplits = splits;
+        if ((!effectiveSplits || !Array.isArray(effectiveSplits) || effectiveSplits.length === 0) && Array.isArray(req.body.split_user_ids) && req.body.split_user_ids.length > 0) {
+            effectiveSplits = req.body.split_user_ids.map(uid => ({ user_id: parseInt(uid) }));
+        }
+
         // Validate splits
-        if (!splits || !Array.isArray(splits) || splits.length === 0) {
+        if (!effectiveSplits || !Array.isArray(effectiveSplits) || effectiveSplits.length === 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'Please select at least one group member to split with.' });
         }
 
         const groupMembersRes = await client.query('SELECT user_id FROM group_members WHERE group_id = $1', [groupId]);
         const groupMemberSet = new Set(groupMembersRes.rows.map(m => parseInt(m.user_id)));
-        for (const s of splits) {
+        for (const s of effectiveSplits) {
             if (!groupMemberSet.has(parseInt(s.user_id))) {
                 await client.query('ROLLBACK');
                 return res.status(400).json({ error: 'All split participants must be enrolled members of the selected group.' });
             }
         }
-        const effectivePayer = parseInt(paid_by || existingExp.paid_by);
-        if (!groupMemberSet.has(effectivePayer)) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ error: 'The selected payer must be an enrolled member of this group.' });
+        let normalizedPayers = [];
+        if (Array.isArray(payers) && payers.length > 0) {
+            let sumPayers = 0;
+            for (const p of payers) {
+                const pUid = parseInt(p.user_id !== undefined ? p.user_id : (p.id !== undefined ? p.id : p.userId));
+                const pAmt = roundMoney(parseFloat(p.amount) || 0);
+                if (!groupMemberSet.has(pUid)) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'All payers must be enrolled members of this circle.' });
+                }
+                if (pAmt <= 0) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'Each payer must have contributed an amount greater than zero.' });
+                }
+                normalizedPayers.push({ user_id: pUid, amount: pAmt });
+                sumPayers = roundMoney(sumPayers + pAmt);
+            }
+            if (Math.abs(sumPayers - totalAmount) > 0.05) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ 
+                    error: `The sum of payer amounts (₹${sumPayers.toFixed(2)}) must equal the total expense amount (₹${totalAmount.toFixed(2)}).` 
+                });
+            }
+        } else {
+            const effectivePayer = parseInt(paid_by || existingExp.paid_by);
+            if (!groupMemberSet.has(effectivePayer)) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'The selected payer must be an enrolled member of this group.' });
+            }
+            normalizedPayers.push({ user_id: effectivePayer, amount: totalAmount });
         }
+        const effectivePrimaryPayer = normalizedPayers.slice().sort((a, b) => b.amount - a.amount)[0].user_id;
 
         const normalizedUpdate = splitEngine.normalizeSplits({
             totalAmount,
             splitType: effectiveSplitType,
-            splits,
+            splits: effectiveSplits,
             currency: (req.body.currency || existingExp.currency || 'INR').toUpperCase()
         });
         if (normalizedUpdate.error) {
@@ -3606,7 +3776,16 @@ app.put('/api/expenses/:id', async (req, res) => {
             SET description = $1, amount = $2, paid_by = $3, category = $4, split_type = $5, notes = $6, expense_date = COALESCE($7, expense_date),
                 currency = $8, original_amount = $9, exchange_rate = $10, converted_amount = $11, rate_provider = $12, rate_timestamp = $13
             WHERE id = $14
-        `, [expDesc, totalAmount, paid_by || existingExp.paid_by, sanitizeText(category || existingExp.category, 50) || 'General', effectiveSplitType, sanitizeText(notes, 2000), expense_date || null, expCurrency, originalAmount, exchangeRate, convertedAmount, rateProvider, rateTimestamp, expenseId]);
+        `, [expDesc, totalAmount, effectivePrimaryPayer, sanitizeText(category || existingExp.category, 50) || 'General', effectiveSplitType, sanitizeText(notes, 2000), expense_date || null, expCurrency, originalAmount, exchangeRate, convertedAmount, rateProvider, rateTimestamp, expenseId]);
+
+        // Delete old payers and insert updated payers
+        await client.query('DELETE FROM expense_payers WHERE expense_id = $1', [expenseId]);
+        for (const p of normalizedPayers) {
+            await client.query(`
+                INSERT INTO expense_payers (expense_id, user_id, amount)
+                VALUES ($1, $2, $3)
+            `, [expenseId, p.user_id, p.amount]);
+        }
 
         // Delete old splits
         await client.query('DELETE FROM expense_splits WHERE expense_id = $1', [expenseId]);
@@ -5482,14 +5661,15 @@ async function computeUserBalances(currentUserId) {
     });
 
     const outstandingRes = await pool.query(`
-        SELECT es.user_id AS debtor, e.paid_by AS creditor,
-               SUM(es.base_amount - es.settled_amount_base) AS outstanding
+        SELECT es.user_id AS debtor, ep.user_id AS creditor,
+               SUM((es.base_amount - es.settled_amount_base) * (ep.amount / NULLIF(e.amount, 0))) AS outstanding
         FROM expense_splits es
         JOIN expenses e ON es.expense_id = e.id
-        WHERE (es.user_id = $1 OR e.paid_by = $1)
-          AND es.user_id <> e.paid_by
+        JOIN expense_payers ep ON ep.expense_id = e.id
+        WHERE (es.user_id = $1 OR ep.user_id = $1)
+          AND es.user_id <> ep.user_id
           AND (es.base_amount - es.settled_amount_base) > 0.005
-        GROUP BY es.user_id, e.paid_by
+        GROUP BY es.user_id, ep.user_id
     `, [currentUserId]);
 
     outstandingRes.rows.forEach(r => {
@@ -5706,36 +5886,71 @@ const simplifyDebtsHandler = async (req, res) => {
             if (!role) return;
         }
 
-        let query = `
-            SELECT es.user_id as debtor, e.paid_by as creditor,
-                   SUM(es.base_amount - es.settled_amount_base) as amount
-            FROM expense_splits es
-            JOIN expenses e ON es.expense_id = e.id
-            WHERE es.user_id <> e.paid_by
-              AND (es.base_amount - es.settled_amount_base) > 0.005
-        `;
-        const params = [];
-        if (groupId) {
-            params.push(groupId);
-            query += ` AND e.group_id = $1`;
-        } else {
-            params.push(authId);
-            query += ` AND e.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)`;
-        }
-        query += ` GROUP BY es.user_id, e.paid_by`;
-
-        const debtsRes = await pool.query(query, params);
-
-        // Compute net balance for each person
+        let originalTxCount = 0;
         const netBalances = {};
-        debtsRes.rows.forEach(d => {
-            const debtor = parseInt(d.debtor);
-            const creditor = parseInt(d.creditor);
-            const amt = parseFloat(d.amount);
+        if (groupId) {
+            const bRes = await pool.query(`
+                SELECT
+                    u.id as user_id,
+                    (COALESCE(p.paid_amt, 0) - COALESCE(o.owed_amt, 0) + COALESCE(sp.settled_paid, 0) - COALESCE(sr.settled_recv, 0)) as net_balance
+                FROM group_members gm
+                JOIN users u ON gm.user_id = u.id
+                LEFT JOIN (
+                    SELECT ep.user_id, SUM(ep.amount) as paid_amt
+                    FROM expense_payers ep
+                    JOIN expenses e ON ep.expense_id = e.id
+                    WHERE e.group_id = $1
+                    GROUP BY ep.user_id
+                ) p ON p.user_id = u.id
+                LEFT JOIN (
+                    SELECT es.user_id, SUM(es.base_amount) as owed_amt
+                    FROM expense_splits es
+                    JOIN expenses e ON es.expense_id = e.id
+                    WHERE e.group_id = $1
+                    GROUP BY es.user_id
+                ) o ON o.user_id = u.id
+                LEFT JOIN (
+                    SELECT payer_id, SUM(amount) as settled_paid
+                    FROM settlements
+                    WHERE group_id = $1
+                    GROUP BY payer_id
+                ) sp ON sp.payer_id = u.id
+                LEFT JOIN (
+                    SELECT receiver_id, SUM(amount) as settled_recv
+                    FROM settlements
+                    WHERE group_id = $1
+                    GROUP BY receiver_id
+                ) sr ON sr.receiver_id = u.id
+                WHERE gm.group_id = $1
+            `, [groupId]);
 
-            netBalances[debtor] = (netBalances[debtor] || 0) - amt;
-            netBalances[creditor] = (netBalances[creditor] || 0) + amt;
-        });
+            bRes.rows.forEach(r => {
+                const bal = Math.round((parseFloat(r.net_balance) || 0) * 100) / 100;
+                netBalances[r.user_id] = bal;
+                if (Math.abs(bal) > 0.01) originalTxCount++;
+            });
+        } else {
+            let query = `
+                SELECT es.user_id as debtor, ep.user_id as creditor,
+                       SUM((es.base_amount - es.settled_amount_base) * (ep.amount / NULLIF(e.amount, 0))) as amount
+                FROM expense_splits es
+                JOIN expenses e ON es.expense_id = e.id
+                JOIN expense_payers ep ON ep.expense_id = e.id
+                WHERE es.user_id <> ep.user_id
+                  AND (es.base_amount - es.settled_amount_base) > 0.005
+                  AND e.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+                GROUP BY es.user_id, ep.user_id
+            `;
+            const debtsRes = await pool.query(query, [authId]);
+            originalTxCount = debtsRes.rows.length;
+            debtsRes.rows.forEach(d => {
+                const debtor = parseInt(d.debtor);
+                const creditor = parseInt(d.creditor);
+                const amt = parseFloat(d.amount);
+                netBalances[debtor] = (netBalances[debtor] || 0) - amt;
+                netBalances[creditor] = (netBalances[creditor] || 0) + amt;
+            });
+        }
 
         // Separate debtors (negative net) and creditors (positive net)
         const debtors = [];
@@ -5783,9 +5998,9 @@ const simplifyDebtsHandler = async (req, res) => {
         }));
 
         res.json({
-            original_transactions_count: debtsRes.rows.length,
+            original_transactions_count: originalTxCount,
             simplified_transactions_count: enriched.length,
-            reduction_percentage: debtsRes.rows.length > 0 ? Math.round(((debtsRes.rows.length - enriched.length) / debtsRes.rows.length) * 100) : 0,
+            reduction_percentage: originalTxCount > 0 ? Math.round(((originalTxCount - enriched.length) / originalTxCount) * 100) : 0,
             transactions: enriched,
             simplified_debts: enriched
         });
@@ -5796,6 +6011,7 @@ const simplifyDebtsHandler = async (req, res) => {
 
 app.get('/api/simplify-debts', simplifyDebtsHandler);
 app.get('/api/simplify-debts/:groupId', simplifyDebtsHandler);
+app.get('/api/groups/:groupId/simplified-debts', simplifyDebtsHandler);
 
 // ==========================================
 // 7. EXPENSE REMINDER EMAIL API
@@ -7266,6 +7482,22 @@ app.post('/api/chatbot/confirm-action', async (req, res) => {
 
             const expenseId = expRes.rows[0].id;
 
+            if (Array.isArray(params.payers) && params.payers.length > 0) {
+                for (const p of params.payers) {
+                    await client.query(`
+                        INSERT INTO expense_payers (expense_id, user_id, amount)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (expense_id, user_id) DO UPDATE SET amount = EXCLUDED.amount
+                    `, [expenseId, p.user_id || p.id, roundMoney(p.amount)]);
+                }
+            } else {
+                await client.query(`
+                    INSERT INTO expense_payers (expense_id, user_id, amount)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (expense_id, user_id) DO UPDATE SET amount = EXCLUDED.amount
+                `, [expenseId, effectivePayerId, roundMoney(numAmount)]);
+            }
+
             for (const s of resolvedSplits) {
                 await client.query(`
                     INSERT INTO expense_splits
@@ -7661,7 +7893,7 @@ async function extractExpenseIntent(query, currentUserId, allUsers, allGroups, c
     const lowerQ = cleanQ.toLowerCase();
 
     // 1. Amount Extraction
-    const amtRegex = /(?:₹|rs\.?|inr)?\s*(\d+(?:,\d+)?(?:\.\d+)?)/gi;
+    const amtRegex = /(?:₹|rs\.?|inr|\$|€|£)?\s*(\d+(?:,\d+)?(?:\.\d+)?)/gi;
     let match;
     const allNumbers = [];
     while ((match = amtRegex.exec(cleanQ)) !== null) {
@@ -7670,7 +7902,14 @@ async function extractExpenseIntent(query, currentUserId, allUsers, allGroups, c
             allNumbers.push({ val, raw: match[0], index: match.index });
         }
     }
-    if (allNumbers.length === 0) return null;
+    if (allNumbers.length === 0) {
+        const spokenVal = extractSpokenAmount(cleanQ);
+        if (spokenVal) {
+            allNumbers.push({ val: spokenVal, raw: String(spokenVal), index: 0 });
+        } else {
+            return null;
+        }
+    }
     const totalAmount = allNumbers[0].val;
 
     // 2. Currency
@@ -7681,10 +7920,12 @@ async function extractExpenseIntent(query, currentUserId, allUsers, allGroups, c
 
     // 3. Payer Identification
     let effectivePayer = allUsers.find(u => u.id === currentUserId) || { id: currentUserId, name: 'You' };
-    const payerPaidMatch = cleanQ.match(/([a-zA-Z\s]+?)\s+paid\b/i);
-    const paidByMatch = cleanQ.match(/paid\s+by\s+([a-zA-Z\s]+)/i);
+    const payerPaidMatch = cleanQ.match(/([a-zA-Z\u0900-\u097F\u0A80-\u0AFF\s]+?)\s+(?:paid|paid\s+for|ne\s+pay\s+karyo|e\s+chukvya|ne\s+diye|ne\s+bhugtan\s+kiya)\b/i);
+    const paidByMatch = cleanQ.match(/(?:paid\s+by|chuka\s+kare|chookvya)\s+([a-zA-Z\u0900-\u097F\u0A80-\u0AFF\s]+)/i);
 
     const matchUserByName = (nameStr) => {
+        const scriptMatch = matchUserAcrossScripts(nameStr, allUsers);
+        if (scriptMatch) return scriptMatch;
         const clean = nameStr.trim().toLowerCase();
         for (const u of allUsers) {
             if (u.name.toLowerCase() === clean) return u;
@@ -7697,15 +7938,57 @@ async function extractExpenseIntent(query, currentUserId, allUsers, allGroups, c
 
     if (payerPaidMatch) {
         const candidate = payerPaidMatch[1].trim().toLowerCase();
-        if (candidate !== 'i' && candidate !== 'we' && candidate !== 'who') {
+        if (candidate !== 'i' && candidate !== 'we' && candidate !== 'who' && candidate !== 'me' && candidate !== 'main' && candidate !== 'mein' && candidate !== 'hu') {
             const foundPayer = matchUserByName(candidate);
             if (foundPayer) effectivePayer = foundPayer;
         }
     } else if (paidByMatch) {
         const candidate = paidByMatch[1].trim().toLowerCase();
-        if (candidate !== 'me' && candidate !== 'myself') {
+        if (candidate !== 'me' && candidate !== 'myself' && candidate !== 'i') {
             const foundPayer = matchUserByName(candidate);
             if (foundPayer) effectivePayer = foundPayer;
+        }
+    }
+
+    // 3B. Multi-Payer Extraction (e.g. "where I paid 2000 and Bob paid 1000")
+    let extractedPayers = [];
+    const payerSectionMatch = cleanQ.match(/(?:where|jisme|jema|in which|with payers|jema ke)\s+(.+)$/i);
+    const searchTarget = payerSectionMatch ? payerSectionMatch[1] : cleanQ;
+
+    const payerContribPattern = /(?:and|aur|ane|,)?\s*([a-zA-Z\u0900-\u097F\u0A80-\u0AFF]+(?:\s+[a-zA-Z\u0900-\u097F\u0A80-\u0AFF]+)?)\s+(?:paid|chuka\s+kare|chukvya|diye|ne\s+diye|ne\s+chukvya|e\s+chukvya)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:,\d+)?(?:\.\d+)?)/gi;
+    const payerContribPatternRev = /(?:₹|rs\.?|inr)?\s*(\d+(?:,\d+)?(?:\.\d+)?)\s+(?:paid\s+by|diye|chukvya)\s+([a-zA-Z\u0900-\u097F\u0A80-\u0AFF]+(?:\s+[a-zA-Z\u0900-\u097F\u0A80-\u0AFF]+)?)/gi;
+
+    let pMatch;
+    const payerMatches = [];
+    while ((pMatch = payerContribPattern.exec(searchTarget)) !== null) {
+        let uCandidate = pMatch[1].replace(/^(?:and|aur|ane|tatha|ne)\s+/i, '').trim();
+        uCandidate = uCandidate.replace(/\s+(?:ne|e|ye)$/i, '').trim();
+        const pAmt = parseFloat(pMatch[2].replace(/,/g, ''));
+        payerMatches.push({ name: uCandidate, amount: pAmt });
+    }
+    if (payerMatches.length < 2) {
+        while ((pMatch = payerContribPatternRev.exec(searchTarget)) !== null) {
+            const pAmt = parseFloat(pMatch[1].replace(/,/g, ''));
+            let uCandidate = pMatch[2].replace(/^(?:and|aur|ane|tatha|ne)\s+/i, '').trim();
+            uCandidate = uCandidate.replace(/\s+(?:ne|e|ye)$/i, '').trim();
+            payerMatches.push({ name: uCandidate, amount: pAmt });
+        }
+    }
+
+    if (payerMatches.length >= 2) {
+        let sumPayerMatch = 0;
+        const validPayers = [];
+        for (const pm of payerMatches) {
+            const isSelf = /\b(me|myself|i|main|mein|mane|hu|મેં|મને|મારા|मेरे|मैंने)\b/i.test(pm.name);
+            const userObj = isSelf ? (allUsers.find(u => u.id === currentUserId) || { id: currentUserId, name: 'You' }) : matchUserByName(pm.name);
+            if (userObj) {
+                validPayers.push({ id: userObj.id, user_id: userObj.id, amount: pm.amount, name: userObj.name });
+                sumPayerMatch += pm.amount;
+            }
+        }
+        if (validPayers.length >= 2 && Math.abs(sumPayerMatch - totalAmount) <= 0.05) {
+            extractedPayers = validPayers;
+            effectivePayer = validPayers.slice().sort((a, b) => b.amount - a.amount)[0];
         }
     }
 
@@ -7962,8 +8245,9 @@ async function extractExpenseIntent(query, currentUserId, allUsers, allGroups, c
     }
 
     const requiredUserIds = new Set();
-    requiredUserIds.add(Number(effectivePayer.id));
-    for (const p of participants) requiredUserIds.add(Number(p.id));
+    requiredUserIds.add(Number(effectivePayer.id || effectivePayer.user_id));
+    for (const ep of extractedPayers) requiredUserIds.add(Number(ep.id || ep.user_id));
+    for (const p of participants) requiredUserIds.add(Number(p.id || p.user_id));
 
     if (matchedGroup) {
         const grpMembers = groupMemberMap.get(Number(matchedGroup.id)) || new Set();
@@ -8049,6 +8333,7 @@ async function extractExpenseIntent(query, currentUserId, allUsers, allGroups, c
         hasExplicitDesc,
         explicitGroupMentioned: explicitGroupCandidate,
         payer: effectivePayer,
+        payers: extractedPayers.length >= 2 ? extractedPayers : null,
         isEveryone,
         participants,
         group: matchedGroup,
@@ -8063,6 +8348,29 @@ app.post('/api/chatbot/query', async (req, res) => {
         
         if (!effectiveUserId || isNaN(effectiveUserId) || effectiveUserId <= 0) {
             return res.status(401).json({ error: 'Authentication required. Please sign in to use the AI Assistant.' });
+        }
+
+        // Automatic voice speech synthesis (spoken_text) decorator for all responses
+        let detectedLang = detectLanguage(query || '', language);
+        const originalJson = res.json.bind(res);
+        res.json = (body) => {
+            if (body && body.reply && !body.spoken_text) {
+                body.spoken_text = generateSpokenText(body.reply, body.detectedLang || detectedLang);
+            }
+            return originalJson(body);
+        };
+
+        // First evaluate specialized voice assistant engine (Master admin telemetry, multi-turn slot-filling continuation, confirmation execution)
+        const voiceEngineResult = await processVoiceAssistantQuery({
+            query,
+            language,
+            currentUserId: effectiveUserId,
+            conversationId: conversation_id,
+            pool,
+            splitEngine
+        });
+        if (voiceEngineResult) {
+            return res.status(voiceEngineResult.status).json(voiceEngineResult.response);
         }
 
         const userCheck = await pool.query('SELECT id, name, email, phone, upi_id, default_currency, avatar_initials FROM users WHERE id = $1', [effectiveUserId]);
@@ -8087,13 +8395,8 @@ app.post('/api/chatbot/query', async (req, res) => {
         const session = getOrCreateSession(conversation_id, currentUserId);
         const sessionCtx = session.context;
 
-        // Language Detection: Gujarati (\u0A80-\u0AFF), Hindi (\u0900-\u097F), or English
-        let detectedLang = language;
-        if (/[\u0A80-\u0AFF]/.test(safeQuery) || /kharcho|ketla|leva|aapva|rupia|shunya|mane|tame|trippo|chhe|karyo|bijee|sauthi/i.test(lowerQ)) {
-            detectedLang = 'gu';
-        } else if (/[\u0900-\u097F]/.test(safeQuery) || /kharcha|kitna|dena|lena|hisaab|batao|dikhaye|kare|kaise|bhai|dusri|alawa|sabse/i.test(lowerQ)) {
-            detectedLang = 'hi';
-        }
+        // Language Detection using Indic Multilingual Engine
+        detectedLang = detectLanguage(safeQuery, language);
 
         // 1. Fetch complete live system context from PostgreSQL (Strictly Isolated to Authenticated User)
         const [groupsRes, expensesRes, usersRes, rolesRes, userBalances] = await Promise.all([
@@ -8153,6 +8456,9 @@ app.post('/api/chatbot/query', async (req, res) => {
         };
 
         const findMentionedUser = (text) => {
+            const scriptMatched = matchUserAcrossScripts(text, allUsers);
+            if (scriptMatched) return scriptMatched;
+
             const lowerT = text.toLowerCase();
             for (const u of allUsers) {
                 const full = u.name.toLowerCase();
@@ -8965,6 +9271,10 @@ app.post('/api/chatbot/query', async (req, res) => {
                 const isSmartCustom = parsed.splitType === 'smart_custom';
                 const lockedCount = parsed.participants.filter(p => p.is_locked).length;
                 const unlockedCount = parsed.participants.length - lockedCount;
+                const isMultiPayer = Array.isArray(parsed.payers) && parsed.payers.length >= 2;
+                const payerDisplay = isMultiPayer
+                    ? parsed.payers.map(p => `${p.user_id === currentUserId ? 'You' : p.name.split(' ')[0]} (${expCurSymbol}${parseFloat(p.amount).toLocaleString('en-IN')})`).join(' & ')
+                    : (parsed.payer.id === currentUserId ? 'You (' + parsed.payer.name + ')' : parsed.payer.name);
 
                 const toolCall = {
                     action: 'ADD_EXPENSE',
@@ -8976,6 +9286,7 @@ app.post('/api/chatbot/query', async (req, res) => {
                         groupName: targetGroupName,
                         paidBy: parsed.payer.id,
                         payerName: parsed.payer.name,
+                        payers: parsed.payers || null,
                         splitType: parsed.splitType,
                         participants: parsed.participants.map(p => ({
                             id: p.id,
@@ -8990,9 +9301,11 @@ app.post('/api/chatbot/query', async (req, res) => {
                             is_locked: p.is_locked === true
                         }))
                     },
-                    summary: isSmartCustom
-                        ? `Add ${expCurSymbol}${parsed.amount.toLocaleString('en-IN')} for "${parsed.description}" in ${targetGroupName} (Smart Custom Split: ${lockedCount} locked, ${unlockedCount} auto-distributed)`
-                        : `Add ${expCurSymbol}${parsed.amount.toLocaleString('en-IN')} for "${parsed.description}" in ${targetGroupName} (${parsed.participants.length === 1 ? 'Only You' : 'Only ' + participantSummaryNames}: ${expCurSymbol}${parsed.participants[0].amount.toLocaleString('en-IN')} each)`
+                    summary: isMultiPayer
+                        ? `Add ${expCurSymbol}${parsed.amount.toLocaleString('en-IN')} for "${parsed.description}" in ${targetGroupName} (Multi-Payer: ${payerDisplay})`
+                        : (isSmartCustom
+                            ? `Add ${expCurSymbol}${parsed.amount.toLocaleString('en-IN')} for "${parsed.description}" in ${targetGroupName} (Smart Custom Split: ${lockedCount} locked, ${unlockedCount} auto-distributed)`
+                            : `Add ${expCurSymbol}${parsed.amount.toLocaleString('en-IN')} for "${parsed.description}" in ${targetGroupName} (${parsed.participants.length === 1 ? 'Only You' : 'Only ' + participantSummaryNames}: ${expCurSymbol}${parsed.participants[0].amount.toLocaleString('en-IN')} each)`)
                 };
                 sessionCtx.pendingTool = toolCall;
 
@@ -9003,11 +9316,11 @@ app.post('/api/chatbot/query', async (req, res) => {
 
                 let reply;
                 if (detectedLang === 'hi') {
-                    reply = `मैं यह खर्चा जोड़ने के लिए तैयार हूँ:\n\n• **खर्चा**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• **विवरण**: ${parsed.description}\n• **सर्कल**: ${targetGroupName}\n• **भुगतानकर्ता**: ${parsed.payer.id === currentUserId ? 'आप (' + parsed.payer.name + ')' : parsed.payer.name}${isSmartCustom ? '\n• **विभाजन**: स्मार्ट कस्टम (लॉक और ऑटो वितरण)' : ''}\n\n**शामिल सदस्य (${parsed.participants.length})**:\n${participantLines}\n\n**कुल**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n*${isSmartCustom ? 'लॉक की गई राशियां सुरक्षित हैं और शेष राशि स्वतः वितरित की गई है।' : `केवल ये ${parsed.participants.length} सदस्य ही इस खर्चे में शामिल होंगे।`}*\n\nकृपया आगे बढ़ने के लिए नीचे पुष्टि करें।`;
+                    reply = `मैं यह खर्चा जोड़ने के लिए तैयार हूँ:\n\n• **खर्चा**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• **विवरण**: ${parsed.description}\n• **सर्कल**: ${targetGroupName}\n• **भुगतानकर्ता**: ${payerDisplay}${isMultiPayer ? ' (मल्टीपल पेयर्स)' : ''}${isSmartCustom ? '\n• **विभाजन**: स्मार्ट कस्टम (लॉक और ऑटो वितरण)' : ''}\n\n**शामिल सदस्य (${parsed.participants.length})**:\n${participantLines}\n\n**कुल**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n*${isSmartCustom ? 'लॉक की गई राशियां सुरक्षित हैं और शेष राशि स्वतः वितरित की गई है।' : `केवल ये ${parsed.participants.length} सदस्य ही इस खर्चे में शामिल होंगे।`}*\n\nकृपया आगे बढ़ने के लिए नीचे पुष्टि करें।`;
                 } else if (detectedLang === 'gu') {
-                    reply = `હું આ ખર્ચ નોંધવા માટે તૈયાર છું:\n\n• **ખર્ચ**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• **વિગત**: ${parsed.description}\n• **સર્કલ**: ${targetGroupName}\n• **ચુકવનાર**: ${parsed.payer.id === currentUserId ? 'તમે (' + parsed.payer.name + ')' : parsed.payer.name}${isSmartCustom ? '\n• **વહેંચણી**: સ્માર્ટ કસ્ટમ (લૉક અને ઑટો વિતરણ)' : ''}\n\n**ભાગીદારો (${parsed.participants.length})**:\n${participantLines}\n\n**કુલ**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n*${isSmartCustom ? 'લૉક થયેલ રકમ સુરક્ષિત છે અને બાકીની રકમ આપમેળે વહેંચાયેલ છે.' : `ફક્ત આ ${parsed.participants.length} સભ્યો જ સામેલ થશે.`}*\n\nકૃપા કરીને ખાતરી કરવા માટે નીચે ક્લિક કરો.`;
+                    reply = `હું આ ખર્ચ નોંધવા માટે તૈયાર છું:\n\n• **ખર્ચ**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• **વિગત**: ${parsed.description}\n• **સર્કલ**: ${targetGroupName}\n• **ચુકવનાર**: ${payerDisplay}${isMultiPayer ? ' (બહુવિધ ચુકવણીકારો)' : ''}${isSmartCustom ? '\n• **વહેંચણી**: સ્માર્ટ કસ્ટમ (લૉક અને ઑટો વિતરણ)' : ''}\n\n**ભાગીદારો (${parsed.participants.length})**:\n${participantLines}\n\n**કુલ**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n*${isSmartCustom ? 'લૉક થયેલ રકમ સુરક્ષિત છે અને બાકીની રકમ આપમેળે વહેંચાયેલ છે.' : `ફક્ત આ ${parsed.participants.length} સભ્યો જ સામેલ થશે.`}*\n\nકૃપા કરીને ખાતરી કરવા માટે નીચે ક્લિક કરો.`;
                 } else {
-                    reply = `I'm ready to record this expense:\n\n• **Expense**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• **Description**: ${parsed.description}\n• **Circle**: ${targetGroupName}\n• **Payer**: ${parsed.payer.id === currentUserId ? 'You (' + parsed.payer.name + ')' : parsed.payer.name}${isSmartCustom ? '\n• **Split Mode**: Smart Custom Split (Lock & Auto Distribute)' : ''}\n\n**Participants (${parsed.participants.length})**:\n${participantLines}\n\n**Total**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n*${isSmartCustom ? 'Locked amounts are fixed and remaining balance is auto-distributed equally.' : `Only ${parsed.participants.length === 1 ? 'this user' : 'these ' + parsed.participants.length + ' participants'} will be included in the split.`}*\n\nPlease confirm below to proceed or cancel.`;
+                    reply = `I'm ready to record this expense:\n\n• **Expense**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n• **Description**: ${parsed.description}\n• **Circle**: ${targetGroupName}\n• **Payer(s)**: ${payerDisplay}${isMultiPayer ? ' (Multiple Payers)' : ''}${isSmartCustom ? '\n• **Split Mode**: Smart Custom Split (Lock & Auto Distribute)' : ''}\n\n**Participants (${parsed.participants.length})**:\n${participantLines}\n\n**Total**: ${expCurSymbol}${parsed.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n*${isSmartCustom ? 'Locked amounts are fixed and remaining balance is auto-distributed equally.' : `Only ${parsed.participants.length === 1 ? 'this user' : 'these ' + parsed.participants.length + ' participants'} will be included in the split.`}*\n\nPlease confirm below to proceed or cancel.`;
                 }
 
                 recordTurn(reply, 'TOOL_PROPOSAL', 'CONFIRM_TOOL');
