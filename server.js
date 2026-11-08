@@ -11734,3 +11734,48 @@ const HOST = '0.0.0.0';
 app.listen(PORT, HOST, () => {
     console.log(`✓ SplitEase Server active on http://${HOST}:${PORT}`);
 });
+
+// ------------------------------------------------------------------------------
+// Automated Keep-Alive Service for Cloud Hosts (e.g. Render.com Free Tier)
+// Prevents container sleep by periodically requesting the lightweight /health route.
+// ------------------------------------------------------------------------------
+const isRenderOrProduction = Boolean(
+    process.env.RENDER ||
+    process.env.RENDER_EXTERNAL_URL ||
+    process.env.KEEP_ALIVE_URL ||
+    process.env.NODE_ENV === 'production'
+);
+
+if (isRenderOrProduction) {
+    const keepAliveUrl = process.env.RENDER_EXTERNAL_URL ||
+        process.env.KEEP_ALIVE_URL ||
+        'https://splitwisepro-d83s.onrender.com';
+
+    const PING_INTERVAL_MS = 12 * 60 * 1000; // 12 minutes (Render idle sleep is 15 minutes)
+
+    setInterval(() => {
+        try {
+            const https = require('https');
+            const target = `${keepAliveUrl.replace(/\/+$/, '')}/health`;
+            const req = https.get(target, { timeout: 15000 }, (res) => {
+                if (res.statusCode >= 200 && res.statusCode < 400) {
+                    console.log(`[Keep-Alive] Ping succeeded: ${target} (${res.statusCode})`);
+                } else {
+                    console.warn(`[Keep-Alive] Ping returned status ${res.statusCode}: ${target}`);
+                }
+                res.resume();
+            });
+            req.on('error', (err) => {
+                console.warn('[Keep-Alive] Non-critical ping warning:', err.message);
+            });
+            req.on('timeout', () => {
+                req.destroy();
+                console.warn('[Keep-Alive] Ping timeout, socket discarded');
+            });
+        } catch (pingErr) {
+            console.warn('[Keep-Alive] Ping execution warning:', pingErr.message);
+        }
+    }, PING_INTERVAL_MS);
+
+    console.log(`✓ Automated Keep-Alive active (pinging ${keepAliveUrl}/health every 12 minutes)`);
+}
