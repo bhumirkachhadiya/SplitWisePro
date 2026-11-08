@@ -9747,6 +9747,8 @@
             const group_id = parseInt(document.getElementById('newExpenseGroup').value);
             let paid_by = parseInt(document.getElementById('newExpensePayer').value);
             let payersPayload = null;
+            const expense_date = document.getElementById('newExpenseDate')?.value || new Date().toISOString().split('T')[0];
+            const notes = document.getElementById('newExpenseNotes')?.value?.trim() || '';
 
             if (isMultiPayerMode) {
                 const payerEntries = Object.entries(multiPayerContributions)
