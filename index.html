@@ -1624,6 +1624,9 @@
                         <select id="newExpenseGroup" required onchange="onExpenseGroupChange()" class="qw-input text-xs py-2.5">
                             <option value="">Select Circle...</option>
                         </select>
+                        <!-- Live Circle Media & Appearance Preview -->
+                        <div id="expenseGroupMediaBadge" class="hidden p-2.5 rounded-2xl border border-outline-variant/40 bg-surface-container-low flex items-center justify-between gap-3 transition-all">
+                        </div>
                     </div>
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
@@ -2451,10 +2454,11 @@
             <!-- Active Conversation Thread (8 cols) -->
             <div id="activeChatThreadPanel" class="lg:col-span-8 qw-card p-4 sm:p-5 flex flex-col justify-between overflow-hidden relative">
                 <div class="pb-3 border-b border-outline-variant flex items-center justify-between">
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div class="flex items-center gap-2.5 min-w-0">
                         <button type="button" onclick="closeActiveMobileChat()" class="lg:hidden p-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high flex-shrink-0" title="Back to discussions list">
                             <span class="material-symbols-outlined text-[18px]">arrow_back</span>
                         </button>
+                        <div id="activeChatAvatar" class="w-9 h-9 rounded-xl overflow-hidden bg-primary/20 text-primary font-bold flex items-center justify-center flex-shrink-0 text-xs shadow-xs hidden"></div>
                         <div class="min-w-0">
                             <h3 id="activeChatTitle" class="text-sm font-bold text-on-surface truncate">Select a Circle Thread</h3>
                             <p id="activeChatSubtitle" class="text-[11px] text-on-surface-variant truncate">Real-time team discussion</p>
@@ -8621,6 +8625,9 @@
 
             groupSelect.innerHTML = allGroups.map(g => `<option value="${g.id}">${g.name} (${g.category})</option>`).join('');
             filterGroupSelect.innerHTML = '<option value="all">All Groups</option>' + allGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+            if (groupSelect.value && typeof onExpenseGroupChange === 'function') {
+                onExpenseGroupChange();
+            }
 
             // Member list with Roles in Create Group Modal (Isolated strictly to currentUser + Confirmed Friends)
             const memberListDiv = document.getElementById('newGroupMemberList');
@@ -8815,14 +8822,19 @@
                     </div>
                 `;
             } else {
-                activeGroupsContainer.innerHTML = allGroups.slice(0, 3).map(g => `
+                activeGroupsContainer.innerHTML = allGroups.slice(0, 3).map(g => {
+                    const initials = (g.name ? g.name.trim().split(' ').map(n=>n[0]).join('') : 'GP').substring(0, 2).toUpperCase();
+                    const iconHtml = g.icon_url 
+                        ? `<img src="${escapeChatHtml(g.icon_url)}" class="w-full h-full object-cover" alt="Icon"/>`
+                        : escapeChatHtml(initials);
+                    return `
                     <div class="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20 cursor-pointer hover:bg-surface-container" onclick="navigateTo('groups')">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-8 h-8 rounded-lg bg-primary text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
-                                ${g.name.split(' ').map(n=>n[0]).join('').substring(0,2)}
+                            <div class="w-8 h-8 rounded-lg bg-primary text-white font-bold text-xs flex items-center justify-center flex-shrink-0 overflow-hidden shadow-2xs">
+                                ${iconHtml}
                             </div>
                             <div class="min-w-0">
-                                <span class="text-xs font-bold text-on-surface truncate block">${g.name}</span>
+                                <span class="text-xs font-bold text-on-surface truncate block">${escapeChatHtml(g.name)}</span>
                                 <span class="text-[10px] text-on-surface-variant">${g.member_count} members</span>
                             </div>
                         </div>
@@ -8830,7 +8842,8 @@
                             ${g.user_net_balance >= 0 ? '+' : ''}₹${Math.round(g.user_net_balance).toLocaleString('en-IN')}
                         </span>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             }
         }
 
@@ -9819,6 +9832,53 @@
                 }
             }
 
+            // Update Circle Media Preview Badge on Record Expense screen
+            const mediaBadge = document.getElementById('expenseGroupMediaBadge');
+            if (mediaBadge) {
+                if (!group) {
+                    mediaBadge.classList.add('hidden');
+                    mediaBadge.innerHTML = '';
+                    mediaBadge.style.backgroundImage = 'none';
+                } else {
+                    mediaBadge.classList.remove('hidden');
+                    const iconSrc = group.icon_url || '';
+                    const coverSrc = group.cover_photo_url || '';
+                    const initials = (group.name ? group.name.trim().split(' ').map(n=>n[0]).join('') : 'GP').substring(0, 2).toUpperCase();
+                    const memCount = (members && members.length) ? members.length : (group.member_count || 1);
+                    const category = group.category || 'General';
+
+                    mediaBadge.innerHTML = `
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div class="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 border-2 border-surface bg-primary/20 text-primary font-bold text-xs flex items-center justify-center shadow-xs">
+                                ${iconSrc ? `<img src="${escapeChatHtml(iconSrc)}" alt="Circle Icon" class="w-full h-full object-cover"/>` : `<span>${escapeChatHtml(initials)}</span>`}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-xs font-bold text-on-surface truncate">${escapeChatHtml(group.name)}</span>
+                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary dark:bg-primary/20">${escapeChatHtml(category)}</span>
+                                </div>
+                                <div class="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+                                    <span class="material-symbols-outlined text-[13px]">groups</span>
+                                    <span>${memCount} member${memCount === 1 ? '' : 's'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="activeOverviewGroupId = ${group.id}; openGroupMediaModal();" class="flex-shrink-0 px-2.5 py-1 rounded-xl border border-outline-variant/40 bg-surface-container-high/80 hover:bg-surface-container-highest text-on-surface hover:text-primary transition-all text-xs font-semibold flex items-center gap-1 shadow-2xs backdrop-blur-xs" title="Update group cover photo or icon">
+                            <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+                            <span class="text-[11px]">${iconSrc || coverSrc ? 'Edit Photo' : 'Add Photo'}</span>
+                        </button>
+                    `;
+
+                    if (coverSrc) {
+                        mediaBadge.style.backgroundImage = `linear-gradient(to right, rgba(255,255,255,0.92), rgba(255,255,255,0.82)), url('${escapeChatHtml(coverSrc)}')`;
+                        mediaBadge.style.backgroundSize = 'cover';
+                        mediaBadge.style.backgroundPosition = 'center';
+                    } else {
+                        mediaBadge.style.backgroundImage = 'none';
+                    }
+                }
+            }
+
             if (!payerSelect) return;
 
             if (members.length === 0) {
@@ -10723,10 +10783,14 @@
                                         🔒 Locked
                                     </span>
                                 ` : ''}
+                            <div class="flex items-center gap-1.5 relative z-10">
+                                <button type="button" onclick="event.stopPropagation(); activeOverviewGroupId = '${g.id}'; openGroupMediaModal();" class="p-1 rounded-lg bg-white/85 dark:bg-slate-800/95 hover:bg-white text-slate-700 dark:text-slate-200 shadow-xs border border-outline-variant/20 dark:border-slate-700 flex items-center justify-center transition-all backdrop-blur-md" title="Customize Circle Photo & Banner">
+                                    <span class="material-symbols-outlined text-[15px]">photo_camera</span>
+                                </button>
+                                <span class="px-2 py-0.5 rounded-lg bg-white/80 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-outline-variant/20 dark:border-slate-700">
+                                    ${g.member_count || (g.members ? g.members.length : 0)} Members
+                                </span>
                             </div>
-                            <span class="px-2 py-0.5 rounded-lg bg-white/80 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-outline-variant/20 dark:border-slate-700 relative z-10">
-                                ${g.member_count || (g.members ? g.members.length : 0)} Members
-                            </span>
                         </div>
 
                         <div class="p-6 flex-1 flex flex-col justify-between -mt-6 relative z-10">
@@ -11092,14 +11156,31 @@
                 showToast('Group cover photo and icon saved successfully!', 'success');
                 closeGroupMediaModal();
 
+                const newCover = data.cover_photo_url || (data.group && data.group.cover_photo_url) || null;
+                const newIcon = data.icon_url || (data.group && data.group.icon_url) || null;
+
                 const g = (allGroups || []).find(grp => String(grp.id) === String(activeOverviewGroupId));
                 if (g) {
-                    if (data.cover_photo_url) g.cover_photo_url = data.cover_photo_url;
-                    if (data.icon_url) g.icon_url = data.icon_url;
+                    if (newCover) g.cover_photo_url = newCover;
+                    if (newIcon) g.icon_url = newIcon;
                 }
 
-                openGroupOverview(activeOverviewGroupId);
+                if (Array.isArray(activeConversations)) {
+                    const matchedConv = activeConversations.find(c => String(c.group_id) === String(activeOverviewGroupId));
+                    if (matchedConv) {
+                        if (newIcon) matchedConv.icon_url = newIcon;
+                        if (newCover) matchedConv.cover_photo_url = newCover;
+                    }
+                }
+
+                const overviewModal = document.getElementById('groupOverviewModal');
+                if (overviewModal && !overviewModal.classList.contains('hidden')) {
+                    openGroupOverview(activeOverviewGroupId);
+                }
                 renderGroups();
+                renderDashboard();
+                if (typeof onExpenseGroupChange === 'function') onExpenseGroupChange();
+                if (typeof renderChatConversationsList === 'function') renderChatConversationsList();
             } catch(e) {
                 showToast('Error saving group media.', 'error');
             } finally {
@@ -11174,7 +11255,7 @@
             const groupSelect = document.getElementById('newExpenseGroup');
             if (groupSelect) {
                 groupSelect.value = String(activeOverviewGroupId);
-                onGroupChanged();
+                onExpenseGroupChange();
             }
         }
 
@@ -13916,13 +13997,23 @@
                 }
 
                 const memberText = c.type === 'direct' ? 'Personal' : (c.member_count ? `${c.member_count} member${c.member_count === 1 ? '' : 's'}` : 'Circle');
-                const avatarIcon = c.type === 'direct'
-                    ? (c.peer_user && c.peer_user.avatar_initials ? escapeChatHtml(c.peer_user.avatar_initials) : '<span class="material-symbols-outlined text-[18px]">person</span>')
-                    : '<span class="material-symbols-outlined text-[18px]">groups</span>';
+                let avatarIcon;
+                if (c.type === 'direct') {
+                    avatarIcon = (c.peer_user && c.peer_user.avatar_initials ? escapeChatHtml(c.peer_user.avatar_initials) : '<span class="material-symbols-outlined text-[18px]">person</span>');
+                } else {
+                    const matchedGroup = (allGroups || []).find(grp => String(grp.id) === String(c.group_id));
+                    const groupIcon = c.icon_url || (matchedGroup && matchedGroup.icon_url);
+                    if (groupIcon) {
+                        avatarIcon = `<img src="${escapeChatHtml(groupIcon)}" class="w-full h-full object-cover" alt="Circle Icon"/>`;
+                    } else {
+                        const initials = (c.title ? c.title.trim().split(' ').map(n=>n[0]).join('') : 'GP').substring(0, 2).toUpperCase();
+                        avatarIcon = `<span class="font-bold text-xs">${escapeChatHtml(initials)}</span>`;
+                    }
+                }
 
                 return `
                     <div onclick="selectConversation(${c.id})" class="p-3.5 cursor-pointer rounded-xl transition-all flex items-center gap-3 ${isSelected ? 'bg-primary/10 border border-primary/30 shadow-xs' : 'hover:bg-surface-container-low border border-transparent'}">
-                        <div class="w-9 h-9 rounded-xl ${c.type === 'group' ? 'bg-secondary-container text-on-secondary-container' : 'bg-primary/20 text-primary'} font-bold flex items-center justify-center flex-shrink-0 text-xs shadow-xs">
+                        <div class="w-9 h-9 rounded-xl ${c.type === 'group' ? 'bg-secondary-container text-on-secondary-container' : 'bg-primary/20 text-primary'} font-bold flex items-center justify-center flex-shrink-0 text-xs shadow-xs overflow-hidden">
                             ${avatarIcon}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -14107,8 +14198,25 @@
             // Update Header
             const titleEl = document.getElementById('activeChatTitle');
             const subEl = document.getElementById('activeChatSubtitle');
+            const avatarEl = document.getElementById('activeChatAvatar');
             if (titleEl && conv) titleEl.innerText = conv.title;
             if (subEl && conv) subEl.innerText = conv.type === 'group' ? `Group Discussion • ${conv.member_count || 'Multiple'} members` : '1-to-1 Personal Chat';
+            if (avatarEl && conv) {
+                avatarEl.classList.remove('hidden');
+                if (conv.type === 'direct') {
+                    const initials = (conv.peer_user && conv.peer_user.avatar_initials) ? conv.peer_user.avatar_initials : 'U';
+                    avatarEl.innerHTML = `<span class="text-xs font-bold">${escapeChatHtml(initials)}</span>`;
+                } else {
+                    const matchedGroup = (allGroups || []).find(grp => String(grp.id) === String(conv.group_id));
+                    const icon = conv.icon_url || (matchedGroup && matchedGroup.icon_url);
+                    if (icon) {
+                        avatarEl.innerHTML = `<img src="${escapeChatHtml(icon)}" class="w-full h-full object-cover" alt="Circle Icon"/>`;
+                    } else {
+                        const initials = (conv.title ? conv.title.trim().split(' ').map(n=>n[0]).join('') : 'GP').substring(0, 2).toUpperCase();
+                        avatarEl.innerHTML = `<span class="text-xs font-bold">${escapeChatHtml(initials)}</span>`;
+                    }
+                }
+            }
 
             // Enable input and button
             const input = document.getElementById('chatMessageInput');

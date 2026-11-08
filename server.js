@@ -2446,11 +2446,13 @@ app.post('/api/groups', async (req, res) => {
 
         const colors = ['#006c4b', '#16a878', '#4d6171', '#006c4c', '#d0e5f9'];
         const randomColor = avatar_color || colors[Math.floor(Math.random() * colors.length)];
+        const rawCover = req.body.cover_photo_url || req.body.cover_photo || req.body.cover_image || null;
+        const rawIcon = req.body.icon_url || req.body.icon || req.body.icon_image || null;
 
         const result = await pool.query(
-            `INSERT INTO groups (name, description, category, avatar_color, created_by) 
-             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-            [groupName.trim(), description || '', category || 'General', randomColor, creator]
+            `INSERT INTO groups (name, description, category, avatar_color, created_by, cover_photo_url, icon_url) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [groupName.trim(), description || '', category || 'General', randomColor, creator, rawCover, rawIcon]
         );
         const groupId = result.rows[0].id;
 
@@ -3248,7 +3250,8 @@ app.post('/api/groups/:id/media', async (req, res) => {
             return res.status(403).json({ error: 'Permission denied: Only group Admins or Editors can update group images.' });
         }
 
-        const { cover_image, icon_image, cover_photo_url, icon_url } = req.body;
+        const rawCover = req.body.cover_image || req.body.cover_photo || req.body.cover_photo_url || null;
+        const rawIcon = req.body.icon_image || req.body.icon || req.body.icon_url || null;
         let finalCover = null;
         let finalIcon = null;
 
@@ -3256,41 +3259,43 @@ app.post('/api/groups/:id/media', async (req, res) => {
         if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
         // Handle cover photo
-        if (cover_image && typeof cover_image === 'string' && cover_image.startsWith('data:image/')) {
-            const matches = cover_image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+        if (rawCover && typeof rawCover === 'string' && rawCover.startsWith('data:image/')) {
+            const matches = rawCover.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
             if (matches) {
                 let ext = matches[1].toLowerCase();
                 if (ext === 'jpeg') ext = 'jpg';
-                if (['jpg', 'png', 'webp'].includes(ext)) {
+                if (['jpg', 'png', 'webp', 'gif', 'svg+xml'].includes(ext)) {
+                    if (ext === 'svg+xml') ext = 'svg';
                     const buf = Buffer.from(matches[2], 'base64');
-                    if (buf.length <= 5 * 1024 * 1024) {
+                    if (buf.length <= 10 * 1024 * 1024) {
                         const filename = `group_cover_${groupId}_${Date.now()}.${ext}`;
                         fs.writeFileSync(path.join(uploadDir, filename), buf);
                         finalCover = `/uploads/groups/${filename}`;
                     }
                 }
             }
-        } else if (cover_photo_url && typeof cover_photo_url === 'string') {
-            finalCover = cover_photo_url.trim();
+        } else if (rawCover && typeof rawCover === 'string' && (rawCover.startsWith('http://') || rawCover.startsWith('https://') || rawCover.startsWith('/uploads/'))) {
+            finalCover = rawCover.trim();
         }
 
         // Handle group icon
-        if (icon_image && typeof icon_image === 'string' && icon_image.startsWith('data:image/')) {
-            const matches = icon_image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+        if (rawIcon && typeof rawIcon === 'string' && rawIcon.startsWith('data:image/')) {
+            const matches = rawIcon.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
             if (matches) {
                 let ext = matches[1].toLowerCase();
                 if (ext === 'jpeg') ext = 'jpg';
-                if (['jpg', 'png', 'webp', 'gif'].includes(ext)) {
+                if (['jpg', 'png', 'webp', 'gif', 'svg+xml'].includes(ext)) {
+                    if (ext === 'svg+xml') ext = 'svg';
                     const buf = Buffer.from(matches[2], 'base64');
-                    if (buf.length <= 5 * 1024 * 1024) {
+                    if (buf.length <= 10 * 1024 * 1024) {
                         const filename = `group_icon_${groupId}_${Date.now()}.${ext}`;
                         fs.writeFileSync(path.join(uploadDir, filename), buf);
                         finalIcon = `/uploads/groups/${filename}`;
                     }
                 }
             }
-        } else if (icon_url && typeof icon_url === 'string') {
-            finalIcon = icon_url.trim();
+        } else if (rawIcon && typeof rawIcon === 'string' && (rawIcon.startsWith('http://') || rawIcon.startsWith('https://') || rawIcon.startsWith('/uploads/'))) {
+            finalIcon = rawIcon.trim();
         }
 
         let query = 'UPDATE groups SET updated_at = NOW()';
@@ -3308,9 +3313,12 @@ app.post('/api/groups/:id/media', async (req, res) => {
         params.push(groupId);
 
         const updateRes = await pool.query(query, params);
+        const updatedGroup = updateRes.rows[0] || {};
         res.json({
             success: true,
-            group: updateRes.rows[0],
+            group: updatedGroup,
+            cover_photo_url: updatedGroup.cover_photo_url || null,
+            icon_url: updatedGroup.icon_url || null,
             message: 'Group appearance updated successfully.'
         });
     } catch (err) {
@@ -7753,6 +7761,8 @@ app.get('/api/chat/conversations', async (req, res) => {
                 c.created_at, 
                 c.updated_at,
                 g.name AS group_name,
+                g.icon_url AS icon_url,
+                g.cover_photo_url AS cover_photo_url,
                 CASE 
                     WHEN c.type = 'direct' THEN (
                         SELECT json_build_object(
