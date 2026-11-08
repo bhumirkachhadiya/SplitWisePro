@@ -174,7 +174,7 @@ async function computeGroupNetForUser(groupId, userId, db = pool) {
     return Math.round((parseFloat(r.rows[0].net) || 0) * 100) / 100;
 }
 
-const { pool } = require('./db');
+const { pool, resolvedDatabaseUrl } = require('./db');
 
 pool.connect()
     .then(client => {
@@ -1374,17 +1374,27 @@ app.get('/api/system/diagnostic', async (req, res) => {
             port: e.port
         };
     }
+
+    let emailStatus = null;
+    try {
+        emailStatus = await emailService.verifyEmailService();
+    } catch (e) {
+        emailStatus = { error: e.message };
+    }
+
     res.json({
         app: 'SplitWisePro',
-        version: '1.0.2',
+        version: '1.0.3',
         time: new Date().toISOString(),
         node: process.version,
         database: {
             status: dbStatus,
             configured_url: (process.env.DATABASE_URL || '').replace(/:([^:@]+)@/, ':****@'),
+            resolved_url: (resolvedDatabaseUrl || '').replace(/:([^:@]+)@/, ':****@'),
             info: dbInfo,
             error: dbError
-        }
+        },
+        email: emailStatus
     });
 });
 

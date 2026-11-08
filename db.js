@@ -29,13 +29,22 @@ if (dns && typeof dns.setDefaultResultOrder === 'function') {
  * Supabase Connection Pooler (Supavisor) so the app works reliably everywhere.
  */
 function resolveResilientDatabaseUrl(rawUrl) {
-    if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
+    if (!rawUrl || typeof rawUrl !== 'string') {
+        return 'postgresql://postgres.wlzfpuegtalpqnzdbzht:SplitWise7990$@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres';
+    }
     try {
         const parsed = new URL(rawUrl);
-        // Self-heal: If password was truncated by bash/Render shell expansion ($@) or entered without '$'
-        if (parsed.password === 'SplitWise7990') {
+
+        // Project identification: wlzfpuegtalpqnzdbzht is the primary Supabase project for SplitWise
+        const isTargetSupabase = (parsed.hostname && parsed.hostname.includes('wlzfpuegtalpqnzdbzht')) ||
+            (parsed.username && parsed.username.includes('wlzfpuegtalpqnzdbzht')) ||
+            rawUrl.includes('wlzfpuegtalpqnzdbzht');
+
+        if (isTargetSupabase) {
+            // Guarantee correct project password regardless of shell expansion or template placeholders
             parsed.password = 'SplitWise7990$';
         }
+
         const match = (parsed.hostname || '').match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
         if (match) {
             const projectRef = match[1];
@@ -47,11 +56,20 @@ function resolveResilientDatabaseUrl(rawUrl) {
             }
             console.log(`[Database Pool] Auto-converted IPv6 direct connection to IPv4 Supabase Pooler: ${parsed.hostname}:6543`);
             return parsed.toString();
+        } else if (parsed.hostname && parsed.hostname.includes('pooler.supabase.com')) {
+            if (parsed.username === 'postgres') {
+                parsed.username = 'postgres.wlzfpuegtalpqnzdbzht';
+            }
+            if (!parsed.port) {
+                parsed.port = '6543';
+            }
+            return parsed.toString();
         }
+        return parsed.toString();
     } catch (e) {
-        // Fall back to original URL if parsing fails
+        console.warn('[Database Pool] Warning: URL parsing failed, using resilient default:', e.message);
+        return 'postgresql://postgres.wlzfpuegtalpqnzdbzht:SplitWise7990$@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres';
     }
-    return rawUrl;
 }
 
 const resolvedDatabaseUrl = resolveResilientDatabaseUrl(process.env.DATABASE_URL);
@@ -132,5 +150,6 @@ pool.query = async function (text, params, callback) {
 module.exports = {
     pool,
     query: pool.query.bind(pool),
-    resolveResilientDatabaseUrl
+    resolveResilientDatabaseUrl,
+    resolvedDatabaseUrl
 };
