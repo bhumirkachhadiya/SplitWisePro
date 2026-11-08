@@ -93,6 +93,7 @@ async function sendViaResendRest({ from, to, subject, html, text }) {
 // ------------------------------------------------------------------------------
 let smtpTransporterInstance = null;
 let etherealAccountCache = null;
+let lastEmailError = null;
 
 function getResolvedSmtpConfig(forcePort465 = false) {
     const host = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -264,6 +265,14 @@ async function sendEmail({ to, subject, html, text }) {
             };
         } catch (err) {
             lastError = err;
+            lastEmailError = {
+                message: err.message,
+                code: err.code,
+                command: err.command,
+                response: err.response,
+                responseCode: err.responseCode,
+                time: new Date().toISOString()
+            };
             console.error(`[EmailService] ⚠️ Attempt ${attempt} failed for ${maskedTo}: ${err.message}`);
             smtpTransporterInstance = null; // Clear cached instance to force fresh socket on retry
             if (attempt === 1) {
@@ -801,6 +810,17 @@ async function verifyEmailService() {
 
     const cfg = getResolvedSmtpConfig(false);
     if (cfg.host && cfg.user && cfg.pass) {
+        let verifyStatus = 'unknown';
+        let verifyError = null;
+        try {
+            const transporter = await getSmtpTransporter(false);
+            await transporter.verify();
+            verifyStatus = 'verified';
+        } catch (e) {
+            verifyStatus = 'failed';
+            verifyError = { message: e.message, code: e.code, response: e.response };
+        }
+
         return {
             provider: 'smtp',
             configured: true,
@@ -808,7 +828,10 @@ async function verifyEmailService() {
             host: cfg.host,
             port: cfg.port,
             user: cfg.user.slice(0, 3) + '***@' + (cfg.user.split('@')[1] || ''),
-            secure: cfg.secure
+            secure: cfg.secure,
+            verify_status: verifyStatus,
+            verify_error: verifyError,
+            last_delivery_error: lastEmailError
         };
     }
 
