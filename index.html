@@ -790,7 +790,7 @@
 
                         <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
                             <div id="authNameGroup" class="hidden space-y-1.5">
-                                <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Full Name</label>
+                                <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Full Name *</label>
                                 <div class="relative flex items-center">
                                     <span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">person</span>
                                     <input id="authName" type="text" placeholder="Enter your full name" class="qw-input pl-11"/>
@@ -801,15 +801,36 @@
                             <div class="space-y-1.5">
                                 <label id="authEmailLabel" class="block text-xs font-bold text-on-surface uppercase tracking-wider">Username or Email Address</label>
                                 <div class="relative flex items-center">
-                                    <span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">badge</span>
+                                    <span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]" id="authEmailIcon">badge</span>
                                     <input id="authEmail" type="text" required placeholder="alex@splitease.io or alex" autocomplete="username" class="qw-input pl-11"/>
                                 </div>
                                 <p id="authEmailError" class="hidden text-xs text-rose-500 font-semibold mt-1">Please enter your username or valid email address.</p>
                             </div>
 
+                            <div id="authPhoneGroup" class="hidden space-y-1.5">
+                                <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Mobile Number *</label>
+                                <div class="relative flex items-center">
+                                    <span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">phone_android</span>
+                                    <input id="authPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" class="qw-input pl-11"/>
+                                </div>
+                                <p id="authPhoneError" class="hidden text-xs text-rose-500 font-semibold mt-1">Please enter a valid 10-digit mobile number.</p>
+                            </div>
+
+                            <div id="authUpiGroup" class="hidden space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">UPI ID</label>
+                                    <span class="text-[11px] text-on-surface-variant font-medium">Optional • Add now or in Profile</span>
+                                </div>
+                                <div class="relative flex items-center">
+                                    <span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">account_balance_wallet</span>
+                                    <input id="authUpi" type="text" placeholder="e.g. name@okaxis or 9876543210@upi" class="qw-input pl-11"/>
+                                </div>
+                                <p id="authUpiError" class="hidden text-xs text-rose-500 font-semibold mt-1">Please enter a valid UPI ID (e.g. yourname@okhdfcbank).</p>
+                            </div>
+
                             <div class="space-y-1.5">
                                 <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Password</label>
+                                    <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Password *</label>
                                     <div id="authForgotRow">
                                         <button type="button" onclick="openForgotPasswordModal()" class="text-xs font-semibold text-primary hover:underline">
                                             Forgot password?
@@ -4982,19 +5003,41 @@
             const alertBox = document.getElementById('authAlertBox');
             const nameErr = document.getElementById('authNameError');
             const emailErr = document.getElementById('authEmailError');
+            const phoneErr = document.getElementById('authPhoneError');
+            const upiErr = document.getElementById('authUpiError');
             const passErr = document.getElementById('authPasswordError');
+
             if (alertBox) alertBox.classList.add('hidden');
             if (nameErr) nameErr.classList.add('hidden');
             if (emailErr) emailErr.classList.add('hidden');
+            if (phoneErr) phoneErr.classList.add('hidden');
+            if (upiErr) upiErr.classList.add('hidden');
             if (passErr) passErr.classList.add('hidden');
 
             document.getElementById('authHeading').innerText = isSignUpMode ? 'Create Account' : 'Welcome back';
-            document.getElementById('authSubheading').innerText = isSignUpMode ? 'Register to manage groups & UPI splits' : 'Log in to manage your balances and shared ledgers';
+            document.getElementById('authSubheading').innerText = isSignUpMode ? 'Register to manage groups & UPI splits' : 'Enter your credentials to access your financial circles';
+            
             document.getElementById('authNameGroup').classList.toggle('hidden', !isSignUpMode);
+            document.getElementById('authPhoneGroup').classList.toggle('hidden', !isSignUpMode);
+            document.getElementById('authUpiGroup').classList.toggle('hidden', !isSignUpMode);
+
+            const emailLabel = document.getElementById('authEmailLabel');
+            const emailInput = document.getElementById('authEmail');
+            const emailIcon = document.getElementById('authEmailIcon');
+            if (emailLabel) {
+                emailLabel.innerText = isSignUpMode ? 'Email Address *' : 'Username or Email Address';
+            }
+            if (emailInput) {
+                emailInput.placeholder = isSignUpMode ? 'alex@splitease.io' : 'alex@splitease.io or alex';
+            }
+            if (emailIcon) {
+                emailIcon.innerText = isSignUpMode ? 'mail' : 'badge';
+            }
+
             const forgotRow = document.getElementById('authForgotRow');
             if (forgotRow) forgotRow.classList.toggle('hidden', isSignUpMode);
 
-            document.getElementById('authSubmitBtn').innerHTML = `<span class="material-symbols-outlined text-[18px]">${isSignUpMode ? 'person_add' : 'login'}</span><span>${isSignUpMode ? 'Sign Up for SplitEase' : 'Sign In to SplitEase'}</span>`;
+            document.getElementById('authSubmitBtn').innerHTML = `<span class="material-symbols-outlined text-[18px]">${isSignUpMode ? 'person_add' : 'arrow_forward'}</span><span>${isSignUpMode ? 'Sign Up for SplitEase' : 'Sign In to SplitWise'}</span>`;
             document.getElementById('authToggleBtn').innerText = isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
         }
 
@@ -5108,27 +5151,60 @@
             const emailInput = document.getElementById('authEmail');
             const passwordInput = document.getElementById('authPassword');
             const nameInput = document.getElementById('authName');
+            const phoneInput = document.getElementById('authPhone');
+            const upiInput = document.getElementById('authUpi');
             const alertBox = document.getElementById('authAlertBox');
 
             const nameError = document.getElementById('authNameError');
             const emailError = document.getElementById('authEmailError');
+            const phoneError = document.getElementById('authPhoneError');
+            const upiError = document.getElementById('authUpiError');
             const passwordError = document.getElementById('authPasswordError');
 
             if (nameError) nameError.classList.add('hidden');
             if (emailError) emailError.classList.add('hidden');
+            if (phoneError) phoneError.classList.add('hidden');
+            if (upiError) upiError.classList.add('hidden');
             if (passwordError) passwordError.classList.add('hidden');
             if (alertBox) alertBox.classList.add('hidden');
 
             const email = (emailInput.value || '').trim();
             const password = passwordInput.value || '';
             const name = (nameInput.value || '').trim();
+            const phone = (phoneInput ? phoneInput.value : '').trim();
+            const upi = (upiInput ? upiInput.value : '').trim();
 
             let hasError = false;
 
             if (isSignUpMode) {
                 if (!name || name.length < 2) {
-                    if (nameError) nameError.classList.remove('hidden');
+                    if (nameError) {
+                        nameError.innerText = 'Please enter your full name.';
+                        nameError.classList.remove('hidden');
+                    }
                     hasError = true;
+                }
+
+                // Mobile number is strictly mandatory for account registration
+                const cleanPhone = phone.replace(/[\s\-]/g, '');
+                if (!phone || cleanPhone.length < 10 || !/^\+?[0-9]{10,15}$/.test(cleanPhone)) {
+                    if (phoneError) {
+                        phoneError.innerText = 'Please enter a valid 10-digit mobile number.';
+                        phoneError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+
+                // UPI ID is optional on signup, but validated for valid structure if provided
+                if (upi) {
+                    const upiRegex = /^[\w.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+                    if (!upiRegex.test(upi)) {
+                        if (upiError) {
+                            upiError.innerText = 'Please enter a valid UPI ID (e.g. yourname@okaxis).';
+                            upiError.classList.remove('hidden');
+                        }
+                        hasError = true;
+                    }
                 }
             }
 
@@ -5136,7 +5212,10 @@
             if (isSignUpMode) {
                 // Signup requires a real email address (OTP is delivered there).
                 if (!email || !emailRegex.test(email)) {
-                    if (emailError) emailError.classList.remove('hidden');
+                    if (emailError) {
+                        emailError.innerText = 'Please enter a valid email address.';
+                        emailError.classList.remove('hidden');
+                    }
                     hasError = true;
                 }
             } else {
@@ -5170,11 +5249,18 @@
                 // SIGNUP MODE: Send OTP to email first (Account is created ONLY after OTP is verified)
                 submitBtn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">sync</span><span>Sending Verification Code...</span>`;
 
+                const cleanPhone = phone.replace(/[\s\-]/g, '');
                 try {
                     const res = await fetch(`${API}/auth/send-signup-otp`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email, password })
+                        body: JSON.stringify({ 
+                            name, 
+                            email, 
+                            password,
+                            phone: cleanPhone,
+                            upi_id: upi || undefined
+                        })
                     });
                     const data = await res.json();
 
@@ -5193,6 +5279,8 @@
                         name,
                         email,
                         password,
+                        phone: cleanPhone,
+                        upi_id: upi || undefined,
                         verification_id: data.verification_id
                     };
 

@@ -390,6 +390,25 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
             return res.status(400).json({ error: 'Please enter a valid email address.' });
         }
+
+        // Mobile number is strictly mandatory
+        if (!phone || !phone.trim()) {
+            return res.status(400).json({ error: 'Mobile number is required. Please enter your mobile number.' });
+        }
+        const cleanPhone = phone.trim().replace(/[\s\-]/g, '');
+        if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) {
+            return res.status(400).json({ error: 'Please enter a valid mobile number (at least 10 digits).' });
+        }
+
+        // UPI ID is optional on signup, but validated if provided
+        let cleanUpi = null;
+        if (upi_id && upi_id.trim()) {
+            cleanUpi = upi_id.trim().toLowerCase();
+            if (!/^[\w.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(cleanUpi)) {
+                return res.status(400).json({ error: 'Please enter a valid UPI ID (e.g. name@okaxis or 9876543210@upi).' });
+            }
+        }
+
         if (!password || password.length < 8) {
             return res.status(400).json({ error: 'Password must contain at least 8 characters.' });
         }
@@ -428,7 +447,6 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
         const verificationId = crypto.randomUUID();
         const passwordHash = await bcrypt.hash(password, 10);
         const initials = name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'US';
-        const generatedUpi = (upi_id && upi_id.trim()) || `${name.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
 
         // 5. Store in database (No plaintext password or plaintext OTP stored)
         await pool.query(`
@@ -443,8 +461,8 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
                 name: name.trim(),
                 password_hash: passwordHash,
                 avatar_initials: initials,
-                upi_id: generatedUpi,
-                phone: phone ? phone.trim() : '+91 98765 00000'
+                upi_id: cleanUpi,
+                phone: cleanPhone
             })
         ]);
 
@@ -555,7 +573,7 @@ app.post('/api/auth/verify-signup-otp', async (req, res) => {
             authUserId,
             normalizedEmail,
             password_hash,
-            JSON.stringify({ name: name.trim(), avatar_initials: avatar_initials || 'US', upi_id, phone })
+            JSON.stringify({ name: name.trim(), avatar_initials: avatar_initials || 'US', upi_id: upi_id || null, phone: phone || null })
         ]);
 
         // 6.2 Insert into auth.identities
@@ -580,7 +598,7 @@ app.post('/api/auth/verify-signup-otp', async (req, res) => {
                 upi_id = EXCLUDED.upi_id,
                 phone = EXCLUDED.phone,
                 updated_at = NOW()
-        `, [authUserId, name.trim(), normalizedEmail, avatar_initials || 'US', upi_id, phone || '+91 98765 00000']);
+        `, [authUserId, name.trim(), normalizedEmail, avatar_initials || 'US', upi_id || null, phone || null]);
 
         // 6.4 Insert / Sync into public.users with auth_id
         const newUserRes = await pool.query(`
@@ -596,7 +614,7 @@ app.post('/api/auth/verify-signup-otp', async (req, res) => {
                 is_verified = TRUE,
                 updated_at = NOW()
             RETURNING id, auth_id, name, email, avatar_initials, upi_id, phone
-        `, [authUserId, name.trim(), normalizedEmail, password_hash, avatar_initials || 'US', upi_id, phone || '+91 98765 00000']);
+        `, [authUserId, name.trim(), normalizedEmail, password_hash, avatar_initials || 'US', upi_id || null, phone || null]);
 
         const newUser = newUserRes.rows[0];
 
@@ -944,7 +962,7 @@ app.post('/api/auth/resend-otp', async (req, res) => {
 // Direct Register (Fallback that verifies OTP if supplied or requires verification)
 app.post('/api/users/register', async (req, res) => {
     try {
-        const { name, email, password, otp } = req.body;
+        const { name, email, password, otp, phone, upi_id } = req.body;
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Please provide name, email, and password.' });
         }
@@ -987,13 +1005,15 @@ app.post('/api/users/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'US';
-        const generatedUpi = `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
+        const payload = verif.payload || {};
+        const regPhone = phone || payload.phone || null;
+        const regUpi = upi_id || payload.upi_id || null;
 
         const result = await pool.query(
             `INSERT INTO users (name, email, password_hash, avatar_initials, upi_id, phone, is_verified) 
              VALUES ($1, $2, $3, $4, $5, $6, TRUE) 
              RETURNING id, name, email, avatar_initials, upi_id, phone, created_at`,
-            [name.trim(), normalizedEmail, hashedPassword, initials, generatedUpi, '+91 98765 00000']
+            [name.trim(), normalizedEmail, hashedPassword, initials, regUpi, regPhone]
         );
         const registerSession = await authService.createSession(result.rows[0].id, req);
         res.status(201).json({
@@ -1392,7 +1412,7 @@ app.get('/api/system/diagnostic', async (req, res) => {
 
     res.json({
         app: 'SplitWisePro',
-        version: '1.0.6',
+        version: '1.0.7',
         time: new Date().toISOString(),
         node: process.version,
         database: {
