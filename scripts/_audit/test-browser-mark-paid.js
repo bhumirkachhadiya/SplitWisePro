@@ -61,6 +61,7 @@ async function logoutUI(cdp) {
   // 1. Expense-wise Mark as Paid from the Ledger list
   await cdp.evaluate(`navigateTo('expenses')`);
   await new Promise(r => setTimeout(r, 1500));
+  await cdp.waitFor(`[...document.querySelectorAll('#allExpensesContainer > div')].some(d => d.innerText.includes(${JSON.stringify(desc)}))`, 15000);
   const rowClicked = await cdp.evaluate(`(() => {
     const row = [...document.querySelectorAll('#allExpensesContainer > div')].find(d => d.innerText.includes(${JSON.stringify(desc)}));
     if (!row) return 'no-row';
@@ -102,6 +103,13 @@ async function logoutUI(cdp) {
   check('Sent Requests tab shows the pending request', sentPanel.count === '1' && /Pending approval/i.test(sentPanel.text), JSON.stringify(sentPanel));
   check('debtor sees Awaiting receiver, not Accepted', /Awaiting receiver/i.test(sentPanel.text), sentPanel.text);
   await cdp.screenshot(path.join(SHOT_DIR, 'mark-paid-sent-tab.png'));
+
+  await cdp.goto(BASE + '/#settle');
+  await new Promise(r => setTimeout(r, 4000));
+  await cdp.evaluate(`setPaymentRequestTab('sent')`);
+  await new Promise(r => setTimeout(r, 500));
+  const refreshedSent = await cdp.evaluate(`({ count: document.getElementById('prCountSent').innerText, text: document.getElementById('paymentRequestsList').innerText.replace(/\\s+/g,' ').slice(0,160) })`);
+  check('pending sent request survives a page refresh', refreshedSent.count === '1' && /Pending approval/i.test(refreshedSent.text), JSON.stringify(refreshedSent));
   check('no console errors on debtor flow', cdp.errors.length === 0, cdp.errors.slice(0, 2).join(' | '));
 
   // 2. Receiver sees and accepts
@@ -116,6 +124,13 @@ async function logoutUI(cdp) {
   }))()`);
   check('receiver sees exactly one Pending Received request', rxPanel.received === '1' && rxPanel.sent === '0', JSON.stringify(rxPanel));
   check('receiver sees payer, amount, method and expense detail', rxPanel.text.includes('200.00') && /Browser Debtor/i.test(rxPanel.text) && /CASH|Cash/i.test(rxPanel.text) && rxPanel.text.includes(desc), rxPanel.text);
+
+  await cdp.goto(BASE + '/#settle');
+  await new Promise(r => setTimeout(r, 4000));
+  const refreshedReceived = await cdp.evaluate(`({ count: document.getElementById('prCountReceived').innerText, text: document.getElementById('paymentRequestsList').innerText.replace(/\\s+/g,' ').slice(0,160) })`);
+  check('pending received request survives a page refresh', refreshedReceived.count === '1' && /Browser Debtor/i.test(refreshedReceived.text), JSON.stringify(refreshedReceived));
+  const navBadge = await cdp.evaluate(`(() => { const b = document.getElementById('settleRequestBadge'); return { hidden: b.classList.contains('hidden'), text: b.innerText }; })()`);
+  check('sidebar Settle Up badge alerts the receiver', navBadge.hidden === false && navBadge.text === '1', JSON.stringify(navBadge));
   await cdp.screenshot(path.join(SHOT_DIR, 'mark-paid-received-tab.png'));
 
   await cdp.evaluate(`document.querySelector('button[onclick*="acceptPaymentRequest("]').click()`);

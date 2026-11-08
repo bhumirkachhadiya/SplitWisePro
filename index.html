@@ -889,7 +889,107 @@
     
 
     <!-- ============================================================== -->
-    <!-- 2. MAIN APPLICATION WORKSPACE SHELL                            -->
+    <!-- MODALS: FORGOT PASSWORD MODAL (3-STEP EMAIL OTP VERIFICATION)   -->
+    <!-- (Placed outside appWorkspace so it renders on login screen)    -->
+    <!-- ============================================================== -->
+    <div id="forgotPasswordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm">
+        <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl qw-glass border border-outline-variant shadow-2xl p-5 sm:p-6 space-y-4 animate-in fade-in duration-150">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[22px]">lock_reset</span>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-on-surface" id="forgotModalTitle">Reset Your Password</h3>
+                        <p class="text-xs text-on-surface-variant" id="forgotModalSubtitle">Enter your registered email address</p>
+                    </div>
+                </div>
+                <button onclick="closeForgotPasswordModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <div id="forgotModalAlert" class="hidden p-3 rounded-xl text-xs font-semibold leading-relaxed border"></div>
+
+            <!-- STEP 1: ENTER EMAIL -->
+            <form id="forgotStep1Form" onsubmit="handleForgotStep1Submit(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">Registered Email Address</label>
+                    <div class="relative flex items-center">
+                        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">mail</span>
+                        <input id="forgotEmailInput" type="email" required placeholder="Enter your email address" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeForgotPasswordModal()" class="qw-btn qw-btn-secondary text-xs-low">Cancel</button>
+                    <button type="submit" id="forgotStep1SubmitBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-sm transition-all active:scale-[0.98]">
+                        <span class="material-symbols-outlined text-[16px]">send</span>
+                        <span>Send Verification Code</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- STEP 2: ENTER OTP -->
+            <form id="forgotStep2Form" onsubmit="handleForgotStep2Submit(event)" class="hidden space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-2 text-center">Enter 6-Digit Code</label>
+                    <div class="flex items-center justify-center gap-2 sm:gap-2.5" id="forgotOtpInputGroup">
+                        <input id="forgotOtp0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
+                        <input id="forgotOtp1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
+                        <input id="forgotOtp2" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
+                        <input id="forgotOtp3" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
+                        <input id="forgotOtp4" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
+                        <input id="forgotOtp5" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
+                    </div>
+                    <div class="flex items-center justify-between text-xs mt-3 pt-2 border-t border-outline-variant/15">
+                        <button type="button" onclick="backToForgotStep1()" class="font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[15px]">arrow_back</span>
+                            <span>Change email</span>
+                        </button>
+                        <button id="forgotResendBtn" type="button" onclick="handleResendForgotOtp()" class="font-bold text-primary hover:underline disabled:opacity-50 disabled:no-underline">
+                            Resend in 30s
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" onclick="closeForgotPasswordModal()" class="qw-btn qw-btn-secondary text-xs-low">Cancel</button>
+                    <button type="submit" id="forgotStep2SubmitBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-sm transition-all active:scale-[0.98]">
+                        <span class="material-symbols-outlined text-[16px]">verified</span>
+                        <span>Verify Code</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- STEP 3: SET NEW PASSWORD -->
+            <form id="forgotStep3Form" onsubmit="handleForgotStep3Submit(event)" class="hidden space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">New Password</label>
+                    <div class="relative flex items-center">
+                        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">lock</span>
+                        <input id="forgotNewPasswordInput" type="password" required minlength="8" placeholder="Enter new password (min. 8 characters)" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">Confirm New Password</label>
+                    <div class="relative flex items-center">
+                        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">lock_clock</span>
+                        <input id="forgotConfirmPasswordInput" type="password" required minlength="8" placeholder="Confirm your new password" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeForgotPasswordModal()" class="qw-btn qw-btn-secondary text-xs-low">Cancel</button>
+                    <button type="submit" id="forgotStep3SubmitBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-sm transition-all active:scale-[0.98]">
+                        <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        <span>Change Password</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- ============================================================== -->
     <div id="appWorkspace" class="hidden min-h-screen bg-surface">
         
@@ -3410,108 +3510,6 @@
     </div>
 
     <!-- ============================================================== -->
-    <!-- MODALS: FORGOT PASSWORD MODAL (3-STEP EMAIL OTP VERIFICATION)   -->
-    <!-- ============================================================== -->
-    <div id="forgotPasswordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm">
-        <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl qw-glass border border-outline-variant shadow-2xl p-5 sm:p-6 space-y-4 animate-in fade-in duration-150">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center">
-                        <span class="material-symbols-outlined text-[22px]">lock_reset</span>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-bold text-on-surface" id="forgotModalTitle">Reset Your Password</h3>
-                        <p class="text-xs text-on-surface-variant" id="forgotModalSubtitle">Enter your registered email address</p>
-                    </div>
-                </div>
-                <button onclick="closeForgotPasswordModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined text-[20px]">close</span>
-                </button>
-            </div>
-
-            <div id="forgotModalAlert" class="hidden p-3 rounded-xl text-xs font-semibold leading-relaxed border"></div>
-
-            <!-- STEP 1: ENTER EMAIL -->
-            <form id="forgotStep1Form" onsubmit="handleForgotStep1Submit(event)" class="space-y-3.5">
-                <div>
-                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">Registered Email Address</label>
-                    <div class="relative flex items-center">
-                        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">mail</span>
-                        <input id="forgotEmailInput" type="email" required placeholder="Enter your email address" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeForgotPasswordModal()" class="qw-btn qw-btn-secondary text-xs-low">Cancel</button>
-                    <button type="submit" id="forgotStep1SubmitBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-sm transition-all active:scale-[0.98]">
-                        <span class="material-symbols-outlined text-[16px]">send</span>
-                        <span>Send Verification Code</span>
-                    </button>
-                </div>
-            </form>
-
-            <!-- STEP 2: ENTER OTP -->
-            <form id="forgotStep2Form" onsubmit="handleForgotStep2Submit(event)" class="hidden space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-2 text-center">Enter 6-Digit Code</label>
-                    <div class="flex items-center justify-center gap-2 sm:gap-2.5" id="forgotOtpInputGroup">
-                        <input id="forgotOtp0" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
-                        <input id="forgotOtp1" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
-                        <input id="forgotOtp2" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
-                        <input id="forgotOtp3" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
-                        <input id="forgotOtp4" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
-                        <input id="forgotOtp5" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="w-10 sm:w-11 h-12 text-center text-lg font-extrabold rounded-xl bg-surface-container-low border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface shadow-xs transition-all" />
-                    </div>
-                    <div class="flex items-center justify-between text-xs mt-3 pt-2 border-t border-outline-variant/15">
-                        <button type="button" onclick="backToForgotStep1()" class="font-semibold text-on-surface-variant hover:text-on-surface flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[15px]">arrow_back</span>
-                            <span>Change email</span>
-                        </button>
-                        <button id="forgotResendBtn" type="button" onclick="handleResendForgotOtp()" class="font-bold text-primary hover:underline disabled:opacity-50 disabled:no-underline">
-                            Resend in 30s
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-1">
-                    <button type="button" onclick="closeForgotPasswordModal()" class="qw-btn qw-btn-secondary text-xs-low">Cancel</button>
-                    <button type="submit" id="forgotStep2SubmitBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-sm transition-all active:scale-[0.98]">
-                        <span class="material-symbols-outlined text-[16px]">verified</span>
-                        <span>Verify Code</span>
-                    </button>
-                </div>
-            </form>
-
-            <!-- STEP 3: SET NEW PASSWORD -->
-            <form id="forgotStep3Form" onsubmit="handleForgotStep3Submit(event)" class="hidden space-y-3.5">
-                <div>
-                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">New Password</label>
-                    <div class="relative flex items-center">
-                        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">lock</span>
-                        <input id="forgotNewPasswordInput" type="password" required minlength="8" placeholder="Enter new password (min. 8 characters)" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">Confirm New Password</label>
-                    <div class="relative flex items-center">
-                        <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">lock_clock</span>
-                        <input id="forgotConfirmPasswordInput" type="password" required minlength="8" placeholder="Confirm your new password" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-2">
-                    <button type="button" onclick="closeForgotPasswordModal()" class="qw-btn qw-btn-secondary text-xs-low">Cancel</button>
-                    <button type="submit" id="forgotStep3SubmitBtn" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-sm transition-all active:scale-[0.98]">
-                        <span class="material-symbols-outlined text-[16px]">check_circle</span>
-                        <span>Change Password</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ============================================================== -->
     <!-- MODALS: EDIT GROUP DETAILS MODAL                               -->
     <!-- ============================================================== -->
     <div id="editGroupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm">
@@ -5368,6 +5366,9 @@
             allPaymentRequests = [];
             paymentRequestTab = 'received';
             markPaidContext = null;
+            if (typeof stopPaymentRequestPolling === 'function') stopPaymentRequestPolling();
+            const settleBadge = document.getElementById('settleRequestBadge');
+            if (settleBadge) settleBadge.classList.add('hidden');
             if (typeof checkMasterAdminAccess === 'function') checkMasterAdminAccess();
 
             // Immediately hide workspace and show auth screen
@@ -5506,6 +5507,12 @@
                     body: JSON.stringify({ email })
                 });
                 const data = await res.json();
+
+                if (!res.ok) {
+                    showForgotAlert(data.error || 'Unable to send the verification code. Please try again.');
+                    if (typeof data.cooldown === 'number') startForgotResendCountdown(data.cooldown);
+                    return;
+                }
 
                 pendingForgotEmail = email;
 
@@ -6986,6 +6993,7 @@
             if (typeof checkMasterAdminAccess === "function") checkMasterAdminAccess();
             await refreshAllData();
             await updateChatUnreadBadge();
+            startPaymentRequestPolling();
 
             // Preserve a deep link such as /#friends instead of forcing dashboard.
             const validInitialViews = ['dashboard', 'expenses', 'groups', 'add-expense', 'settle', 'analytics', 'activity', 'chat', 'friends', 'master-admin'];
@@ -9828,6 +9836,23 @@
         let allPaymentRequests = [];
         let paymentRequestTab = 'received';
         let markPaidContext = null;
+        let paymentRequestPollTimer = null;
+        let lastReceivedPendingCount = null;
+
+        function startPaymentRequestPolling() {
+            if (paymentRequestPollTimer) return;
+            paymentRequestPollTimer = setInterval(() => {
+                if (currentUser && document.visibilityState === 'visible') loadPaymentRequests();
+            }, 30000);
+        }
+
+        function stopPaymentRequestPolling() {
+            if (paymentRequestPollTimer) {
+                clearInterval(paymentRequestPollTimer);
+                paymentRequestPollTimer = null;
+            }
+            lastReceivedPendingCount = null;
+        }
 
         function paymentRequestStatusBadge(status) {
             const value = String(status || 'PENDING').toUpperCase();
@@ -9963,7 +9988,7 @@
 
         async function loadPaymentRequests() {
             const list = document.getElementById('paymentRequestsList');
-            if (!list) return;
+            if (!list || !currentUser) return;
             try {
                 const res = await fetch(`${API}/payment-requests`);
                 if (!res.ok) {
@@ -9980,6 +10005,11 @@
                 setCount('prCountReceived', counts.received_pending);
                 setCount('prCountSent', counts.sent_pending);
                 setCount('prCountHistory', counts.history);
+                const pendingReceived = Number(counts.received_pending || 0);
+                if (lastReceivedPendingCount !== null && pendingReceived > lastReceivedPendingCount) {
+                    showToast(`New payment confirmation request${pendingReceived - lastReceivedPendingCount > 1 ? 's' : ''} received.`, 'info', 4000);
+                }
+                lastReceivedPendingCount = pendingReceived;
                 const navBadge = document.getElementById('settleRequestBadge');
                 if (navBadge) {
                     const pendingReceived = Number(counts.received_pending || 0);

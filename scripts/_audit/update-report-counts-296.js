@@ -1,0 +1,11 @@
+const fs = require('fs');
+const p = 'docs/SPLITWISE_FINAL_AUDIT_REPORT.md';
+let c = fs.readFileSync(p, 'utf8');
+c = c.replace('| Real-browser E2E tests (Chrome DevTools Protocol) | 125 | 125 | 0 |', '| Real-browser E2E tests (Chrome DevTools Protocol) | 127 | 127 | 0 |');
+c = c.replace('| **Total automated checks** | **294** | **294** | **0** |', '| **Total automated checks** | **296** | **296** | **0** |');
+c = c.replace('0 errors across 125 E2E checks', '0 errors across 127 E2E checks');
+c = c.replace('| Browser console | 0 errors across 125 E2E checks |', '| Browser console | 0 errors across 127 E2E checks |');
+c = c.replace('294 automated checks passed', '296 automated checks passed');
+c = c.replace('Browser debtor/receiver workflow: **23/23**', 'Browser debtor/receiver workflow: **25/25**');
+fs.writeFileSync(p, c);
+console.log('counts updated to 296');

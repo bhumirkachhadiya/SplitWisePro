@@ -664,13 +664,10 @@ const handleForgotPasswordOtp = async (req, res) => {
                 VALUES ($1, $2, $3, 'password_reset', 0, 5, NOW() + INTERVAL '5 minutes')
             `, [verificationId, normalizedEmail, otpHash]);
 
-            try {
-                await sendOtpEmail({ to: normalizedEmail, otp, purpose: 'password_reset', name: userRes.rows[0].name });
-            } catch (mailErr) {
-                console.error('Failed to send password reset OTP email:', mailErr);
-                await pool.query('DELETE FROM email_verifications WHERE verification_id = $1', [verificationId]);
-                return res.status(500).json({ error: 'Failed to deliver verification email. Please check your email address and try again.' });
-            }
+            // Send asynchronously so a slow/failing SMTP attempt never blocks the
+            // HTTP response. The neutral response still prevents account enumeration.
+            sendOtpEmail({ to: normalizedEmail, otp, purpose: 'password_reset', name: userRes.rows[0].name })
+                .catch(mailErr => console.error('Failed to send password reset OTP email (non-blocking):', mailErr.message));
         }
 
         // 3. Security: Neutral response to prevent account enumeration
@@ -918,14 +915,10 @@ app.post('/api/auth/resend-otp', async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, 0, 5, NOW() + INTERVAL '5 minutes')
         `, [verificationId, normalizedEmail, otpHash, purpose, payload ? JSON.stringify(payload) : null]);
 
-        try {
-            const recipientName = (payload && payload.name) || '';
-            await sendOtpEmail({ to: normalizedEmail, otp, purpose, name: recipientName });
-        } catch (mailErr) {
-            console.error('Failed to resend OTP email:', mailErr);
-            await pool.query('DELETE FROM email_verifications WHERE verification_id = $1', [verificationId]);
-            return res.status(500).json({ error: 'Failed to deliver verification email. Please try again.' });
-        }
+        // Non-blocking: SMTP retries must not delay the resend response.
+        const recipientName = (payload && payload.name) || '';
+        sendOtpEmail({ to: normalizedEmail, otp, purpose, name: recipientName })
+            .catch(mailErr => console.error('Failed to resend OTP email (non-blocking):', mailErr.message));
 
         res.json({
             success: true,
@@ -4234,7 +4227,7 @@ app.post('/api/payment-requests', async (req, res) => {
         }
 
         if (idempotencyKey) {
-            const idem = await client.query('SELECT * FROM payment_requests WHERE idempotency_key = $1 LIMIT 1', [idempotencyKey]);
+            const idem = await client.query('SELECT * FROM payment_requests WHERE idempotency_key = $1 AND payer_id = $2 LIMIT 1', [idempotencyKey, payerId]);
             if (idem.rows.length > 0) {
                 await client.query('COMMIT');
                 return res.status(200).json({ request: mapPaymentRequestRow(idem.rows[0]), idempotent: true });
@@ -4370,6 +4363,14 @@ app.post('/api/payment-requests/:id/accept', async (req, res) => {
             }
         }
         if (pr.group_id) {
+            const members = await client.query(
+                'SELECT user_id FROM group_members WHERE group_id = $1 AND user_id = ANY($2::int[])',
+                [pr.group_id, [pr.payer_id, pr.receiver_id]]
+            );
+            if (members.rows.length !== 2) {
+                await client.query('ROLLBACK');
+                return res.status(403).json({ error: 'Both parties must still be members of this circle to approve the payment.' });
+            }
             const groupRes = await client.query('SELECT is_locked FROM groups WHERE id = $1', [pr.group_id]);
             if (groupRes.rows[0]?.is_locked) {
                 await client.query('ROLLBACK');

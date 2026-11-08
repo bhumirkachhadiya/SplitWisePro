@@ -19,9 +19,9 @@ All confirmed critical and high-severity issues in the tested scope were fixed a
 
 | Suite | Checks | Passed | Failed |
 |---|---:|---:|---:|
-| API / integration / security tests | 135 | 135 | 0 |
-| Real-browser E2E tests (Chrome DevTools Protocol) | 102 | 102 | 0 |
-| **Total automated checks** | **237** | **237** | **0** |
+| API / integration / security tests | 172 | 172 | 0 |
+| Real-browser E2E tests (Chrome DevTools Protocol) | 134 | 134 | 0 |
+| **Total automated checks** | **306** | **306** | **0** |
 
 Static analysis: **0 missing event-handler functions**, **0 unmatched frontend API endpoints**, **0 duplicate real DOM IDs** (only template placeholders), **1 dynamically-created overlay ID** (expected). Browser console errors across all E2E suites: **0**.
 
@@ -278,6 +278,7 @@ Added `expense_splits.base_amount` / `settled_amount_base`. Balances and totals 
 | B-41 | Navigation / DOM | Dashboard overwrote the settle view’s `tabContentOwe` / `tabContentOwed`, deleting the peer list and cross-writing dashboard lists into the settle page | Duplicate element IDs used by `renderDashboard()` | High | Removed the dashboard writes; settle owns its containers; counts updated in `renderSettleUp()` | 27/27 main + 14/14 settle |
 | B-42 | Settlement | “I Have Paid” did nothing; the claim never reached the API | Early self-referencing `window.handleQrPaymentAutoSettlement` wrapper overwrote the real implementation | Critical | Removed the wrapper; bound the real async handler; claim and inbox verified | 14/14 settle E2E |
 | B-43 | Settlement UX | “You Owe” listed every peer as “Settled up”; “Owes You” was never populated | `renderSettleUp()` rendered `allUsers`; `settleOwedCardsContainer` had no renderer | Medium | “You Owe” shows only actual debts; “Owes You” lists receivables with Remind/email actions; empty states added | 14/14 settle E2E + screenshot |
+| B-44 | Auth | “Forgot password” stayed on “Sending Code…” indefinitely and ignored API errors | Endpoint awaited SMTP retries (Gmail 550 daily limit); frontend advanced regardless of `res.ok` | High | OTP send is non-blocking; resend is non-blocking; frontend shows API errors and only advances on success | 7/7 forgot-password E2E (email → OTP → new password → login) |
 
 ---
 
@@ -328,6 +329,7 @@ All requests use parameterised SQL; dynamic filters use fixed fragments and posi
 - Removed duplicate IDs / dead launcher markup; fixed wrong chat and friends containers.
 - Fixed the Friends page: it called a non-existent skeleton method, so it aborted before fetching; the list now renders real connections and friend search works.
 - Deep links such as `/#friends` now open the requested view instead of being reset to the dashboard.
+- “Forgot password” now responds immediately (SMTP delivery is queued) and shows a real error instead of an endless spinner; the full email → OTP → new-password → login flow is covered by a browser test.
 - `/#settle` is neutral on load: no peer, amount, QR, or payment request is created until you explicitly choose a peer and press **Generate Payment QR**. “Awaiting Confirmation” only appears after you press **I Have Paid**.
 - Group deletion is honest: circles with expenses/settlements show **Cannot Delete — Active Financial History** with a one-click **Lock Circle Instead** action, without firing a failing request; empty circles delete normally.
 - Group expense totals now reconcile: payer share is counted once, and a partially paid member is shown as **◐ Paid ₹X** instead of a misleading “Pending”. New expenses correctly show the payer as Paid and every other participant as Pending.
@@ -449,8 +451,8 @@ These are **not** claimed as passed:
 |---|---|
 | Build/syntax | `node --check server.js` passes; app boots |
 | Runtime | Running on `http://127.0.0.1:5000` |
-| Browser console | 0 errors across 102 E2E checks |
-| API | 125/125 checks passed |
+| Browser console | 0 errors across 134 E2E checks |
+| API | 172/172 checks passed |
 | Financial calculations | Exact totals across all split methods; partial settlements correct |
 | Cross-screen consistency | Group details = group balances = personal ledger delta |
 | Database integrity | 0 split-sum mismatches; FKs/checks added; legacy orphans disclosed |
@@ -460,7 +462,7 @@ These are **not** claimed as passed:
 | Master Admin | Protected; master-password tab admin-only, available in all environments with audit + kill switch |
 | Deployment | **Not started, as instructed** |
 
-**Totals:** 16 modules, 87 APIs, 30 base tables + 2 views, 237 automated checks passed, 0 failed in the final regression. 43 bugs fixed. 10 limitations documented.
+**Totals:** 16 modules, 92 APIs, 31 base tables + 2 views, 306 automated checks passed, 0 failed in the final regression. 44 bugs fixed. 10 limitations documented.
 
 ---
 
@@ -469,7 +471,7 @@ These are **not** claimed as passed:
 **Added**
 - `authService.js` — session tokens, expiry, revocation, middleware helpers.
 - `splitEngine.js` — unified exact split engine incl. Shares.
-- `scripts/_audit/` — migrations, security/financial/browser/IDOR/AI tests, cleanup and evidence scripts.
+- `scripts/_audit/` — migrations, security/financial/browser/IDOR/AI tests, `test-payment-requests.js`, `test-browser-mark-paid.js`, cleanup and evidence scripts.
 - `docs/SPLITWISE_FINAL_AUDIT_REPORT.md` — this report.
 
 **Modified**
@@ -480,7 +482,7 @@ These are **not** claimed as passed:
 - `.env` — generated strong OTP/webhook secrets (not committed to this report).
 
 **Database**
-- New: `user_sessions`, `expense_splits.settled_amount`, `.base_amount`, `.settled_amount_base`, `upi_payment_requests.claimed_at/.claimed_utr/.confirmed_by`, integrity constraints, backups.
+- New: `user_sessions`, `payment_requests` (manual Mark as Paid / receiver-confirmed settlement workflow), `expense_splits.settled_amount`, `.base_amount`, `.settled_amount_base`, `upi_payment_requests.claimed_at/.claimed_utr/.confirmed_by`, integrity constraints, backups.
 
 ---
 
@@ -492,6 +494,43 @@ These are **not** claimed as passed:
 4. Add an explicit AI circle picker for ambiguous group selection.
 5. Schedule archival/cleanup of the 169 orphan splits and 47 invalid-user splits after owner approval.
 6. Optionally implement itemised/recurring splits as the next enhancement.
+
+
+---
+
+## 17. Delivered feature — Mark as Paid & payment confirmation requests
+
+### What was built
+
+A debtor can now claim an external payment (cash, UPI, bank transfer, other) against a specific expense or their overall outstanding balance. The request is only a claim; the ledger changes **only when the actual receiver accepts**.
+
+- **Schema:** `payment_requests` — payer, receiver, group, expense, amount, currency, method, transaction reference, note, status (`PENDING/ACCEPTED/REJECTED/CANCELLED`), `verification_source='RECEIVER_CONFIRMED'`, settlement link, timestamps, responder, rejection reason, idempotency key, expense description/date snapshots.
+- **Constraints:** one pending request per payer/receiver/expense; unique idempotency key; overpayment rejected against the live base-currency outstanding balance; locked circles blocked; accepted UTR cannot be reused.
+- **API:**
+  - `POST /api/payment-requests` — debtor creates an expense-wise or balance-wise request (partial allowed).
+  - `GET /api/payment-requests` — received/sent/history with counts.
+  - `POST /api/payment-requests/:id/accept` — receiver only; applies the exact amount FIFO or to the linked expense, creates one settlement, updates the split/ledger atomically.
+  - `POST /api/payment-requests/:id/reject` — receiver only; no ledger change.
+  - `POST /api/payment-requests/:id/cancel` — payer only while pending.
+- **Notifications:** in-app activity entries for both users on send, accept and reject; a live count on the **Settle Up** sidebar badge and the **Pending Received** tab.
+- **UI:** Mark Paid buttons on the Ledger expense rows, inside the group-expense split table, and on the settlement screen; a **Mark as Paid** modal with amount/method/reference/note; tabs for **Pending Received**, **Sent Requests**, and **Payment History**.
+- **Manual vs online:** every request is labelled **Manual confirmation · receiver-confirmed** and stored with `gateway_verified=false`. It is never presented as UPI/gateway-verified; the separate online UPI confirmation inbox remains unchanged.
+
+### Business rules verified
+
+- Only the debtor can create the request; only the receiver can accept/reject.
+- No ledger mutation while pending or after rejection.
+- Acceptance settles the exact amount, partially or fully, and is idempotent.
+- Duplicate pending requests, duplicate acceptance, duplicate UTR and concurrent acceptance are blocked.
+- Deleting an expense cancels its pending request and keeps the expense snapshot in history.
+- Locked circles block new requests and acceptance until unlocked.
+- Group permissions and membership are rechecked at creation and acceptance.
+
+### Test evidence
+
+- API workflow: **37/37** (`scripts/_audit/test-payment-requests.js`).
+- Browser debtor/receiver workflow: **25/25** (`scripts/_audit/test-browser-mark-paid.js`).
+- Screenshots: `scripts/_audit/shots/mark-paid-modal.png`, `mark-paid-sent-tab.png`, `mark-paid-received-tab.png`, `mark-paid-history.png`.
 
 ---
 
