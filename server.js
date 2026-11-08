@@ -86,7 +86,9 @@ const PUBLIC_API_ROUTES = new Set([
     'POST /users/reset-password',
     'POST /upi/webhook',
     'POST /admin/errors/report',
-    'GET /currencies'
+    'GET /currencies',
+    'GET /health',
+    'GET /system/diagnostic'
 ]);
 
 function isPublicApiRoute(req) {
@@ -1349,6 +1351,42 @@ app.put('/api/users/:id', async (req, res) => {
 // ==========================================
 // 1.5 MULTI-CURRENCY & EXCHANGE RATES API
 // ==========================================
+
+// Public Health & System Diagnostics
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+app.get('/api/system/diagnostic', async (req, res) => {
+    let dbStatus = 'testing';
+    let dbError = null;
+    let dbInfo = null;
+    try {
+        const testRes = await pool.query('SELECT 1 as connected, current_database() as db, current_user as usr, inet_server_addr() as srv_ip');
+        dbStatus = 'connected';
+        dbInfo = testRes.rows[0];
+    } catch (e) {
+        dbStatus = 'error';
+        dbError = {
+            message: e.message,
+            code: e.code,
+            address: e.address,
+            port: e.port
+        };
+    }
+    res.json({
+        app: 'SplitWisePro',
+        version: '1.0.2',
+        time: new Date().toISOString(),
+        node: process.version,
+        database: {
+            status: dbStatus,
+            configured_url: (process.env.DATABASE_URL || '').replace(/:([^:@]+)@/, ':****@'),
+            info: dbInfo,
+            error: dbError
+        }
+    });
+});
 
 // Get all supported currencies with symbols
 app.get('/api/currencies', (req, res) => {
