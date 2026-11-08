@@ -176,6 +176,9 @@ async function runAuthFlowTests() {
             })
         });
         const completeResetData = await completeResetRes.json();
+        if (!completeResetRes.ok) {
+            console.error('completeResetRes failed with:', completeResetRes.status, completeResetData);
+        }
         assert(completeResetRes.ok, 'POST /api/auth/complete-password-reset returned 200');
 
         // Verify Old Password Fails

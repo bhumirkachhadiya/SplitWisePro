@@ -858,7 +858,26 @@
                                 </div>
                                 <div class="relative flex items-center">
                                     <span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">lock</span>
-                                    <input id="authPassword" type="password" required placeholder="••••••••" class="qw-input pl-11"/>
+                                    <input id="authPassword" type="password" required placeholder="••••••••" oninput="onAuthPasswordInput(this.value)" class="qw-input pl-11"/>
+                                </div>
+                                <!-- Password Strength Meter (Shown on Sign Up) -->
+                                <div id="authPasswordStrengthContainer" class="hidden space-y-1.5 mt-2 p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                                    <div class="flex items-center justify-between text-[11px]">
+                                        <span class="text-on-surface-variant font-medium">Password Strength:</span>
+                                        <span id="authPasswordStrengthLabel" class="font-bold text-rose-500">Too Weak</span>
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-1 h-1.5 rounded-full overflow-hidden bg-surface-container">
+                                        <div id="authStrengthBar1" class="h-full rounded-full bg-rose-500 transition-all"></div>
+                                        <div id="authStrengthBar2" class="h-full rounded-full bg-surface-container-high transition-all"></div>
+                                        <div id="authStrengthBar3" class="h-full rounded-full bg-surface-container-high transition-all"></div>
+                                        <div id="authStrengthBar4" class="h-full rounded-full bg-surface-container-high transition-all"></div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1 text-[10px] text-on-surface-variant pt-1 font-medium">
+                                        <div id="authRuleLength" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> 8+ Characters</div>
+                                        <div id="authRuleUpper" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> Uppercase (A-Z)</div>
+                                        <div id="authRuleLower" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> Lowercase (a-z)</div>
+                                        <div id="authRuleSymbol" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> Number / Symbol</div>
+                                    </div>
                                 </div>
                                 <p id="authPasswordError" class="hidden text-xs text-rose-500 font-semibold mt-1">Password must contain at least 8 characters.</p>
                             </div>
@@ -1008,7 +1027,26 @@
                     <label class="block text-xs font-semibold text-on-surface uppercase tracking-wider mb-1">New Password</label>
                     <div class="relative flex items-center">
                         <span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">lock</span>
-                        <input id="forgotNewPasswordInput" type="password" required minlength="8" placeholder="Enter new password (min. 8 characters)" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
+                        <input id="forgotNewPasswordInput" type="password" required minlength="8" placeholder="Enter new password (min. 8 characters)" oninput="onForgotNewPasswordInput(this.value)" class="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-surface-container-low text-xs text-on-surface border border-outline-variant focus:outline-none focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary/30"/>
+                    </div>
+                    <!-- Live Password Strength Meter -->
+                    <div id="forgotPasswordStrengthContainer" class="space-y-1.5 mt-2 p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-on-surface-variant font-medium">Password Strength:</span>
+                            <span id="forgotPasswordStrengthLabel" class="font-bold text-rose-500">Too Weak</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1 h-1.5 rounded-full overflow-hidden bg-surface-container">
+                            <div id="forgotStrengthBar1" class="h-full rounded-full bg-rose-500 transition-all"></div>
+                            <div id="forgotStrengthBar2" class="h-full rounded-full bg-surface-container-high transition-all"></div>
+                            <div id="forgotStrengthBar3" class="h-full rounded-full bg-surface-container-high transition-all"></div>
+                            <div id="forgotStrengthBar4" class="h-full rounded-full bg-surface-container-high transition-all"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-[10px] text-on-surface-variant pt-1 font-medium">
+                            <div id="forgotRuleLength" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> 8+ Characters</div>
+                            <div id="forgotRuleUpper" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> Uppercase (A-Z)</div>
+                            <div id="forgotRuleLower" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> Lowercase (a-z)</div>
+                            <div id="forgotRuleSymbol" class="flex items-center gap-1 text-rose-500"><span class="material-symbols-outlined text-[13px]">cancel</span> Number / Symbol</div>
+                        </div>
                     </div>
                 </div>
 
@@ -1358,18 +1396,25 @@
             <div class="lg:col-span-7 space-y-6">
                 <!-- Trend Chart Card -->
                 <div class="qw-card p-5 sm:p-6 space-y-4">
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                             <h3 class="text-sm font-bold text-on-surface">Spending Velocity</h3>
-                            <p class="text-xs text-on-surface-variant">Expense accumulation trajectory</p>
+                            <p class="text-xs text-on-surface-variant">Expense accumulation & member trajectory</p>
                         </div>
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-surface-container text-on-surface-variant border border-outline-variant">
-                            Live Stream
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <select id="spendingVelocityGroupFilter" onchange="loadSpendingVelocityData()" class="text-xs bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1 text-on-surface font-medium focus:outline-none focus:border-primary">
+                                <option value="">My Overall Trajectory</option>
+                            </select>
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-surface-container text-on-surface-variant border border-outline-variant">
+                                Live Stream
+                            </span>
+                        </div>
                     </div>
                     <div class="h-60 w-full relative">
                         <canvas id="dashboardTrendChart"></canvas>
                     </div>
+                    <!-- Member spending breakdown chips -->
+                    <div id="spendingVelocityMembersList" class="flex flex-wrap items-center gap-2 pt-2 border-t border-outline-variant/40 text-xs"></div>
                 </div>
 
                 <!-- Recent Expenses Stream -->
@@ -1612,13 +1657,9 @@
 
                             <!-- Smart Quick Actions for Payers -->
                             <div class="flex items-center gap-1.5">
-                                <button type="button" onclick="distributePayersEqually()" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-surface-container text-on-surface hover:bg-surface-container-high border border-outline-variant/30 flex items-center gap-1" title="Split total amount equally among active payers">
+                                <button type="button" onclick="distributePayersEqually()" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-surface-container text-on-surface hover:bg-surface-container-high border border-outline-variant/30 flex items-center gap-1" title="Split total amount equally among active payers">
                                     <span class="material-symbols-outlined text-[12px]">balance</span>
                                     <span>Split Equally</span>
-                                </button>
-                                <button type="button" onclick="autoFillRemainingPayer()" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 flex items-center gap-1" title="Auto-fill the remaining unallocated balance to next payer">
-                                    <span class="material-symbols-outlined text-[12px]">auto_fix_high</span>
-                                    <span>Auto-Fill</span>
                                 </button>
                             </div>
 
@@ -1668,13 +1709,12 @@
                         </div>
                     </div>
 
-                    <!-- Split Mode Selector Tabs -->
-                    <div class="grid grid-cols-5 gap-1 p-1 rounded-xl bg-surface-container border border-outline-variant">
+                    <!-- Split Mode Selector Tabs (Merged Exact & Smart into Custom Split) -->
+                    <div class="grid grid-cols-4 gap-1 p-1 rounded-xl bg-surface-container border border-outline-variant">
                         <button type="button" id="splitModeBtnEqual" onclick="setSplitMode('EQUAL')" class="py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs">Equal</button>
+                        <button type="button" id="splitModeBtnSmart" onclick="setSplitMode('SMART_CUSTOM')" class="py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1" title="Custom allocation with auto-distribution of remainder"><span>Custom Split</span></button>
                         <button type="button" id="splitModeBtnShares" onclick="setSplitMode('SHARES')" class="py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface" title="Split by shares (e.g. 1 share, 2 shares)">Shares</button>
-                        <button type="button" id="splitModeBtnExact" onclick="setSplitMode('EXACT')" class="py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface">Exact</button>
                         <button type="button" id="splitModeBtnPct" onclick="setSplitMode('PERCENTAGE')" class="py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface">% Pct</button>
-                        <button type="button" id="splitModeBtnSmart" onclick="setSplitMode('SMART_CUSTOM')" class="py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1"><span>Smart</span><span class="material-symbols-outlined text-[13px]">lock</span></button>
                     </div>
 
                     <!-- Smart Custom Summary Bar (visible when SMART_CUSTOM mode is active) -->
@@ -1700,9 +1740,15 @@
                         <div id="scErrorMsg" class="hidden mt-2 text-rose-500 font-semibold text-center text-[11px] bg-rose-500/10 p-1.5 rounded-lg border border-rose-500/20"></div>
                     </div>
 
-                    <!-- Member List for Split Allocation -->
+                    <!-- Member List for Split Allocation with Select All Toggle -->
                     <div class="space-y-2">
-                        <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Member Split Allocation</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Member Split Allocation</label>
+                            <label class="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer font-semibold select-none">
+                                <input type="checkbox" id="splitSelectAllMembers" onchange="toggleSelectAllSplitMembers(this.checked)" checked class="rounded border-outline-variant text-primary focus:ring-0 cursor-pointer">
+                                <span>Select All</span>
+                            </label>
+                        </div>
                         <div id="splitEngineMemberList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
                             <!-- Populated dynamically by renderSplitEngineMembers() -->
                         </div>
@@ -2380,7 +2426,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-10rem)]">
             
             <!-- Channels / Circles List (4 cols) -->
-            <div class="lg:col-span-4 qw-card p-4 flex flex-col space-y-3 overflow-hidden">
+            <div id="chatConversationsPanel" class="lg:col-span-4 qw-card p-4 flex flex-col space-y-3 overflow-hidden">
                 <div class="flex items-center justify-between pb-2 border-b border-outline-variant">
                     <div class="flex items-center gap-2">
                         <h3 class="text-xs font-bold uppercase tracking-wider text-on-surface">Discussions</h3>
@@ -2403,11 +2449,20 @@
             </div>
 
             <!-- Active Conversation Thread (8 cols) -->
-            <div class="lg:col-span-8 qw-card p-5 flex flex-col justify-between overflow-hidden">
+            <div id="activeChatThreadPanel" class="lg:col-span-8 qw-card p-4 sm:p-5 flex flex-col justify-between overflow-hidden relative">
                 <div class="pb-3 border-b border-outline-variant flex items-center justify-between">
-                    <div>
-                        <h3 id="activeChatTitle" class="text-sm font-bold text-on-surface">Select a Circle Thread</h3>
-                        <p id="activeChatSubtitle" class="text-[11px] text-on-surface-variant">Real-time team discussion</p>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <button type="button" onclick="closeActiveMobileChat()" class="lg:hidden p-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high flex-shrink-0" title="Back to discussions list">
+                            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                        </button>
+                        <div class="min-w-0">
+                            <h3 id="activeChatTitle" class="text-sm font-bold text-on-surface truncate">Select a Circle Thread</h3>
+                            <p id="activeChatSubtitle" class="text-[11px] text-on-surface-variant truncate">Real-time team discussion</p>
+                        </div>
+                    </div>
+                    <div id="activeChatStatusArea" class="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="hidden sm:inline">Encrypted Chat</span>
                     </div>
                 </div>
 
@@ -2416,10 +2471,64 @@
                     <!-- Populated dynamically -->
                 </div>
 
-                <!-- Message Input Form -->
-                <form onsubmit="event.preventDefault(); sendActiveChatMessage();" class="pt-3 border-t border-outline-variant flex items-center gap-2">
-                    <input id="chatMessageInput" type="text" placeholder="Type a message or discuss an expense..." class="qw-input text-xs py-2.5 flex-1"/>
-                    <button id="chatSendBtn" type="submit" class="qw-btn qw-btn-primary py-2.5 px-4 text-xs font-bold">
+                <!-- Emoji & Sticker Drawer Popover -->
+                <div id="chatEmojiPickerPopover" class="hidden absolute bottom-20 left-4 right-4 sm:right-auto sm:w-80 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant shadow-xl rounded-2xl p-3 z-30 space-y-2">
+                    <div class="flex items-center justify-between border-b border-outline-variant/40 pb-1.5 text-xs">
+                        <span class="font-bold text-on-surface flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px] text-primary">mood</span>
+                            <span>Emojis & Stickers</span>
+                        </span>
+                        <button type="button" onclick="toggleChatEmojiPicker(false)" class="text-on-surface-variant hover:text-on-surface">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-8 gap-1.5 text-lg p-1 max-h-36 overflow-y-auto" id="chatEmojiGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div class="pt-2 border-t border-outline-variant/40">
+                        <span class="text-[10px] uppercase font-bold text-on-surface-variant block mb-1.5">Quick Expense Stickers</span>
+                        <div class="flex flex-wrap gap-1.5" id="chatStickersRow">
+                            <button type="button" onclick="sendChatSticker('💸 Paid in Full')" class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 hover:scale-105 transition-transform">💸 Paid in Full</button>
+                            <button type="button" onclick="sendChatSticker('🧾 Please Settle')" class="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 hover:scale-105 transition-transform">🧾 Please Settle</button>
+                            <button type="button" onclick="sendChatSticker('👍 Approved')" class="px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] font-bold border border-primary/20 hover:scale-105 transition-transform">👍 Approved</button>
+                            <button type="button" onclick="sendChatSticker('🍕 Dinner Expense')" class="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[11px] font-bold border border-purple-500/20 hover:scale-105 transition-transform">🍕 Dinner</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GIF Picker Popover -->
+                <div id="chatGifPickerPopover" class="hidden absolute bottom-20 left-4 right-4 sm:right-auto sm:w-80 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant shadow-xl rounded-2xl p-3 z-30 space-y-2">
+                    <div class="flex items-center justify-between border-b border-outline-variant/40 pb-1.5 text-xs">
+                        <span class="font-bold text-on-surface flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px] text-primary">gif</span>
+                            <span>Financial & Fun GIFs</span>
+                        </span>
+                        <button type="button" onclick="toggleChatGifPicker(false)" class="text-on-surface-variant hover:text-on-surface">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto" id="chatGifsGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Message Input Form with Attachments -->
+                <form onsubmit="event.preventDefault(); sendActiveChatMessage();" class="pt-3 border-t border-outline-variant flex items-center gap-1.5 sm:gap-2">
+                    <!-- Attachment button -->
+                    <input type="file" id="chatAttachmentInput" onchange="handleChatAttachmentSelected(event)" class="hidden" accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"/>
+                    <button type="button" onclick="document.getElementById('chatAttachmentInput').click()" class="w-8 h-8 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors flex-shrink-0" title="Attach Document or Image (Max 10MB)">
+                        <span class="material-symbols-outlined text-[18px]">attach_file</span>
+                    </button>
+                    <!-- Emoji button -->
+                    <button type="button" onclick="toggleChatEmojiPicker()" class="w-8 h-8 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface-variant hover:text-amber-500 flex items-center justify-center transition-colors flex-shrink-0" title="Insert Emoji or Sticker">
+                        <span class="material-symbols-outlined text-[18px]">sentiment_satisfied</span>
+                    </button>
+                    <!-- GIF button -->
+                    <button type="button" onclick="toggleChatGifPicker()" class="w-8 h-8 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface-variant hover:text-indigo-500 flex items-center justify-center transition-colors flex-shrink-0 font-extrabold text-[10px]" title="Insert GIF">
+                        GIF
+                    </button>
+                    <input id="chatMessageInput" type="text" placeholder="Type a message or discuss an expense..." class="qw-input text-xs py-2.5 flex-1 min-w-0"/>
+                    <button id="chatSendBtn" type="submit" class="qw-btn qw-btn-primary py-2.5 px-3.5 sm:px-4 text-xs font-bold flex-shrink-0">
                         <span class="material-symbols-outlined text-[16px]">send</span>
                     </button>
                 </form>
@@ -3327,11 +3436,32 @@
 
                 <!-- TAB 1: PROFILE & SECURITY -->
                 <div id="settingsTab-profile" class="space-y-4">
-                    <div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant flex items-center gap-3">
-                        <div id="profileModalAvatar" class="w-12 h-12 rounded-full bg-primary text-white font-bold text-base flex items-center justify-center shadow-sm">AS</div>
-                        <div>
-                            <h4 id="profileModalNameDisplay" class="text-sm font-bold text-on-surface">Alex Sharma</h4>
-                            <p id="profileModalEmailDisplay" class="text-xs text-on-surface-variant">alex@splitease.io</p>
+                    <div class="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-3.5">
+                            <div class="relative group flex-shrink-0">
+                                <div id="profileModalAvatar" class="w-14 h-14 rounded-full bg-primary text-white font-bold text-lg flex items-center justify-center shadow-md overflow-hidden border-2 border-primary/20">
+                                    <span id="profileModalAvatarText">AS</span>
+                                </div>
+                                <label for="profileDpFileInput" class="absolute inset-0 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Change Profile Picture">
+                                    <span class="material-symbols-outlined text-[20px]">photo_camera</span>
+                                </label>
+                                <input type="file" id="profileDpFileInput" accept="image/png,image/jpeg,image/webp,image/gif" onchange="handleProfileDpSelected(event)" class="hidden"/>
+                            </div>
+                            <div>
+                                <h4 id="profileModalNameDisplay" class="text-sm font-bold text-on-surface">Alex Sharma</h4>
+                                <p id="profileModalEmailDisplay" class="text-xs text-on-surface-variant">alex@splitease.io</p>
+                                <p class="text-[10px] text-on-surface-variant/70 mt-0.5">JPG, PNG, WebP or GIF (Max 5MB)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="document.getElementById('profileDpFileInput').click()" class="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface flex items-center gap-1.5 transition-colors">
+                                <span class="material-symbols-outlined text-[15px]">photo_camera</span>
+                                <span>Choose Photo</span>
+                            </button>
+                            <button type="button" id="btnSaveProfileDp" onclick="handleSaveProfilePicture()" class="hidden px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all">
+                                <span class="material-symbols-outlined text-[15px]">save</span>
+                                <span>Save DP</span>
+                            </button>
                         </div>
                     </div>
 
@@ -3956,6 +4086,213 @@
             <!-- Scrollable Expense Details List -->
             <div id="groupExpensesModalList" class="flex-1 overflow-y-auto p-5 space-y-4">
                 <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: RICH GROUP OVERVIEW (DEFAULT VIEW WHEN OPENING A GROUP) -->
+    <!-- ============================================================== -->
+    <div id="groupOverviewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+        <div class="w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl qw-glass border border-outline-variant shadow-2xl flex flex-col animate-in fade-in duration-150">
+            <!-- Cover Photo Banner -->
+            <div id="goCoverPhotoBanner" class="h-36 sm:h-44 w-full relative bg-gradient-to-r from-emerald-600 via-teal-700 to-indigo-800 flex items-end justify-between p-4 bg-cover bg-center">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                <!-- Close Button -->
+                <button onclick="closeGroupOverviewModal()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md transition-colors z-10">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+                <!-- Change Media Button -->
+                <button id="goBtnChangeMedia" onclick="openGroupMediaModal()" class="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 text-white text-xs font-semibold backdrop-blur-md flex items-center gap-1.5 transition-colors z-10 border border-white/20">
+                    <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+                    <span>Change Cover / Icon</span>
+                </button>
+                <!-- Group Icon (Overlapping banner) -->
+                <div class="relative z-10 flex items-end gap-3.5">
+                    <div id="goGroupIcon" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-primary text-white font-black text-xl sm:text-2xl flex items-center justify-center shadow-xl border-4 border-surface overflow-hidden bg-cover bg-center">
+                        GP
+                    </div>
+                    <div class="text-white pb-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 id="goGroupName" class="text-lg sm:text-xl font-extrabold text-white drop-shadow">Group Circle</h2>
+                            <span id="goGroupCategoryBadge" class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] font-bold text-white uppercase tracking-wider">General</span>
+                            <span id="goGroupLockedBadge" class="hidden px-2 py-0.5 rounded-md bg-amber-500/80 backdrop-blur-md text-[10px] font-extrabold text-black uppercase">🔒 Locked</span>
+                        </div>
+                        <p id="goGroupDesc" class="text-xs text-white/80 line-clamp-1 mt-0.5 max-w-md drop-shadow">Collaborative shared expense circle</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Content Area -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+                
+                <!-- WhatsApp Invitation & Sharing Card -->
+                <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs flex-shrink-0">
+                            <span class="material-symbols-outlined text-[22px]">share</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                                <span>WhatsApp Circle Invite URL</span>
+                                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">Secure</span>
+                            </h4>
+                            <p class="text-[11px] text-on-surface-variant mt-0.5">Invite co-travelers and roommates directly via WhatsApp or shareable link.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a id="goWhatsAppShareLink" href="#" target="_blank" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all">
+                            <span>💬 WhatsApp Invite</span>
+                        </a>
+                        <button type="button" onclick="copyGroupInviteLink()" class="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface text-xs font-bold transition-all flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[15px]">content_copy</span>
+                            <span>Copy Link</span>
+                        </button>
+                        <button type="button" id="goBtnRegenerateLink" onclick="regenerateGroupInviteLink()" class="px-2.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface text-xs font-medium transition-all" title="Regenerate Invite Link (Admin only)">
+                            <span class="material-symbols-outlined text-[15px]">refresh</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Financial Snapshot Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
+                    <div class="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/30">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">Total Circle Spend</span>
+                        <span id="goTotalSpend" class="text-sm sm:text-base font-extrabold text-on-surface tabular-nums">₹0.00</span>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Total Settled</span>
+                        <span id="goTotalSettled" class="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">₹0.00</span>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Total Pending</span>
+                        <span id="goTotalPending" class="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400 tabular-nums">₹0.00</span>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-primary block">Your Net Balance</span>
+                        <span id="goUserNetShare" class="text-sm sm:text-base font-extrabold text-primary tabular-nums">₹0.00</span>
+                    </div>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" onclick="quickAddExpenseToCircle()" class="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all">
+                        <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                        <span>+ Record Expense in Circle</span>
+                    </button>
+                    <button type="button" onclick="quickSettleUpForCircle()" class="px-4 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface text-xs font-bold transition-all flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">payments</span>
+                        <span>Settle Balances</span>
+                    </button>
+                </div>
+
+                <!-- Circle Members List with Friend Requests -->
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px] text-primary">groups</span>
+                            <span>Circle Members & Friend Connections</span>
+                        </h4>
+                        <span id="goMemberCountBadge" class="text-[11px] font-bold text-on-surface-variant font-mono">0 Members</span>
+                    </div>
+                    <div id="goMembersList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Circle Expenses Ledger -->
+                <div class="space-y-2.5 pt-2 border-t border-outline-variant/30">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px] text-primary">history</span>
+                            <span>Recorded Circle Expenses</span>
+                        </h4>
+                        <span class="text-[11px] text-on-surface-variant">Tap any expense to view full splits</span>
+                    </div>
+                    <div id="goExpensesList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: GROUP MEDIA (COVER PHOTO & ICON UPLOAD)                 -->
+    <!-- ============================================================== -->
+    <div id="groupMediaModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-3xl qw-glass border border-outline-variant shadow-2xl p-5 sm:p-6 space-y-4 animate-in fade-in duration-150">
+            <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-[22px]">photo_camera</span>
+                    <h3 class="text-sm font-bold text-on-surface">Update Circle Cover & Icon</h3>
+                </div>
+                <button onclick="closeGroupMediaModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <!-- Cover Photo Selection -->
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Group Cover Photo</label>
+                <div id="groupCoverPreview" class="h-28 w-full rounded-2xl bg-surface-container-high border-2 border-dashed border-outline-variant/50 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-all overflow-hidden bg-cover bg-center" onclick="document.getElementById('groupCoverFileInput').click()">
+                    <span class="material-symbols-outlined text-2xl text-on-surface-variant">add_photo_alternate</span>
+                    <span class="text-[11px] text-on-surface-variant mt-1 font-medium">Click to choose cover photo</span>
+                </div>
+                <input type="file" id="groupCoverFileInput" accept="image/*" onchange="handleGroupCoverSelected(event)" class="hidden"/>
+            </div>
+
+            <!-- Group Icon Selection -->
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-on-surface uppercase tracking-wider">Group Icon</label>
+                <div class="flex items-center gap-3">
+                    <div id="groupIconPreview" class="w-14 h-14 rounded-2xl bg-primary text-white font-extrabold text-base flex items-center justify-center shadow-md overflow-hidden bg-cover bg-center cursor-pointer" onclick="document.getElementById('groupIconFileInput').click()">
+                        GP
+                    </div>
+                    <button type="button" onclick="document.getElementById('groupIconFileInput').click()" class="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface">
+                        Choose Icon Image
+                    </button>
+                    <input type="file" id="groupIconFileInput" accept="image/*" onchange="handleGroupIconSelected(event)" class="hidden"/>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-outline-variant">
+                <button type="button" onclick="closeGroupMediaModal()" class="qw-btn qw-btn-secondary text-xs">Cancel</button>
+                <button type="button" id="btnSaveGroupMedia" onclick="handleSaveGroupMedia()" class="qw-btn qw-btn-primary text-xs font-bold">
+                    <span>Save Images</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: PUBLIC GROUP JOIN PREVIEW (WHATSAPP INVITE LINK FLOW)   -->
+    <!-- ============================================================== -->
+    <div id="groupJoinPreviewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-3xl qw-glass border border-outline-variant shadow-2xl p-5 sm:p-6 space-y-4 animate-in fade-in duration-150 text-center">
+            <div id="joinPreviewCover" class="h-28 w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-800 bg-cover bg-center relative flex items-center justify-center -mt-2">
+                <div id="joinPreviewIcon" class="w-16 h-16 rounded-2xl bg-primary text-white font-extrabold text-xl flex items-center justify-center shadow-xl border-2 border-white absolute -bottom-6 overflow-hidden bg-cover bg-center">
+                    GP
+                </div>
+            </div>
+            <div class="pt-6 space-y-1">
+                <h3 id="joinPreviewGroupName" class="text-base font-extrabold text-on-surface">Group Circle</h3>
+                <p id="joinPreviewGroupDesc" class="text-xs text-on-surface-variant max-w-xs mx-auto">You've been invited to join this shared expense circle on SplitWise.</p>
+                <div class="flex items-center justify-center gap-2 pt-2 text-xs text-on-surface-variant">
+                    <span id="joinPreviewMemberCount" class="font-bold text-primary">0 Members</span>
+                    <span>•</span>
+                    <span id="joinPreviewCategory">General</span>
+                </div>
+            </div>
+            <div id="joinPreviewActionContainer" class="pt-3 space-y-2">
+                <button type="button" id="btnConfirmJoinGroup" onclick="handleConfirmJoinGroup()" class="qw-btn qw-btn-primary w-full py-2.5 text-xs font-bold shadow-md">
+                    <span class="material-symbols-outlined text-[18px]">group_add</span>
+                    <span>Join Circle Now</span>
+                </button>
+                <button type="button" onclick="closeGroupJoinPreviewModal()" class="w-full text-xs text-on-surface-variant hover:text-on-surface py-1">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>
@@ -5346,8 +5683,130 @@
             const forgotRow = document.getElementById('authForgotRow');
             if (forgotRow) forgotRow.classList.toggle('hidden', isSignUpMode);
 
+            const strengthContainer = document.getElementById('authPasswordStrengthContainer');
+            if (strengthContainer) {
+                strengthContainer.classList.toggle('hidden', !isSignUpMode);
+                if (isSignUpMode) {
+                    const currentVal = document.getElementById('authPassword')?.value || '';
+                    updatePasswordStrengthUI('auth', currentVal);
+                }
+            }
+
             document.getElementById('authSubmitBtn').innerHTML = `<span class="material-symbols-outlined text-[18px]">${isSignUpMode ? 'person_add' : 'arrow_forward'}</span><span>${isSignUpMode ? 'Sign Up for SplitEase' : 'Sign In to SplitWise'}</span>`;
             document.getElementById('authToggleBtn').innerText = isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
+        }
+
+        // -------------------------------------------------------------
+        // PASSWORD STRENGTH EVALUATION & UI (Req 10)
+        // -------------------------------------------------------------
+        function evaluatePasswordStrength(password) {
+            const p = password || '';
+            const rules = {
+                length: p.length >= 8,
+                upper: /[A-Z]/.test(p),
+                lower: /[a-z]/.test(p),
+                symbol: /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(p)
+            };
+            const passedCount = Object.values(rules).filter(Boolean).length;
+            let score = 'weak';
+            let label = 'Too Weak';
+            let color = 'text-rose-500';
+            let activeBars = p.length > 0 ? 1 : 0;
+            let barColor = 'bg-rose-500';
+
+            if (passedCount >= 4) {
+                score = 'strong';
+                label = 'Strong';
+                color = 'text-emerald-500';
+                activeBars = 4;
+                barColor = 'bg-emerald-500';
+            } else if (passedCount === 3) {
+                score = 'good';
+                label = 'Good';
+                color = 'text-sky-500';
+                activeBars = 3;
+                barColor = 'bg-sky-500';
+            } else if (passedCount === 2) {
+                score = 'fair';
+                label = 'Fair';
+                color = 'text-amber-500';
+                activeBars = 2;
+                barColor = 'bg-amber-500';
+            } else {
+                score = 'weak';
+                label = p.length > 0 ? 'Weak' : 'Too Weak';
+                color = 'text-rose-500';
+                activeBars = p.length > 0 ? 1 : 0;
+                barColor = 'bg-rose-500';
+            }
+
+            return { rules, passedCount, score, label, color, activeBars, barColor };
+        }
+
+        function updatePasswordStrengthUI(prefix, password) {
+            const result = evaluatePasswordStrength(password);
+            const labelEl = document.getElementById(`${prefix}PasswordStrengthLabel`);
+            if (labelEl) {
+                labelEl.innerText = result.label;
+                labelEl.className = `font-bold ${result.color}`;
+            }
+
+            for (let i = 1; i <= 4; i++) {
+                const bar = document.getElementById(`${prefix}StrengthBar${i}`);
+                if (bar) {
+                    if (i <= result.activeBars) {
+                        bar.className = `h-full rounded-full ${result.barColor} transition-all`;
+                    } else {
+                        bar.className = 'h-full rounded-full bg-surface-container-high transition-all';
+                    }
+                }
+            }
+
+            const ruleDefs = [
+                { id: `${prefix}RuleLength`, passed: result.rules.length, label: '8+ Characters' },
+                { id: `${prefix}RuleUpper`, passed: result.rules.upper, label: 'Uppercase (A-Z)' },
+                { id: `${prefix}RuleLower`, passed: result.rules.lower, label: 'Lowercase (a-z)' },
+                { id: `${prefix}RuleSymbol`, passed: result.rules.symbol, label: 'Number / Symbol' }
+            ];
+
+            ruleDefs.forEach(r => {
+                const el = document.getElementById(r.id);
+                if (el) {
+                    if (r.passed) {
+                        el.className = 'flex items-center gap-1 text-emerald-500';
+                        el.innerHTML = `<span class="material-symbols-outlined text-[13px]">check_circle</span> ${r.label}`;
+                    } else {
+                        el.className = 'flex items-center gap-1 text-rose-500';
+                        el.innerHTML = `<span class="material-symbols-outlined text-[13px]">cancel</span> ${r.label}`;
+                    }
+                }
+            });
+        }
+
+        function onAuthPasswordInput(val) {
+            if (isSignUpMode) {
+                updatePasswordStrengthUI('auth', val);
+            }
+        }
+
+        function onForgotNewPasswordInput(val) {
+            updatePasswordStrengthUI('forgot', val);
+        }
+
+        function validateClientPasswordStrength(password) {
+            if (!password || typeof password !== 'string') {
+                return 'Password is required.';
+            }
+            if (password.length < 8) {
+                return 'Password must contain at least 8 characters.';
+            }
+            if (!/[A-Z]/.test(password)) {
+                return 'Password must contain at least one uppercase letter (A-Z).';
+            }
+            if (!/[a-z]/.test(password)) {
+                return 'Password must contain at least one lowercase letter (a-z).';
+            }
+            return null;
         }
 
         // -------------------------------------------------------------
@@ -5587,11 +6046,18 @@
                 }
             }
 
-            if (!password || (isSignUpMode && password.length < 8)) {
+            if (isSignUpMode) {
+                const passErr = validateClientPasswordStrength(password);
+                if (passErr) {
+                    if (passwordError) {
+                        passwordError.innerText = passErr;
+                        passwordError.classList.remove('hidden');
+                    }
+                    hasError = true;
+                }
+            } else if (!password) {
                 if (passwordError) {
-                    passwordError.innerText = isSignUpMode
-                        ? 'Password must contain at least 8 characters.'
-                        : 'Please enter your password.';
+                    passwordError.innerText = 'Please enter your password.';
                     passwordError.classList.remove('hidden');
                 }
                 hasError = true;
@@ -6058,8 +6524,9 @@
             const newPassword = document.getElementById('forgotNewPasswordInput').value || '';
             const confirmPassword = document.getElementById('forgotConfirmPasswordInput').value || '';
 
-            if (newPassword.length < 8) {
-                showForgotAlert('Password must contain at least 8 characters.');
+            const passErr = validateClientPasswordStrength(newPassword);
+            if (passErr) {
+                showForgotAlert(passErr);
                 return;
             }
             if (newPassword !== confirmPassword) {
@@ -7487,23 +7954,28 @@
             if (navName) navName.innerText = currentUser.name;
             const navEmail = document.getElementById('navUserEmail');
             if (navEmail) navEmail.innerText = currentUser.email;
+
+            const avatarHtml = currentUser.avatar_url
+                ? `<img src="${currentUser.avatar_url}" class="w-full h-full object-cover rounded-full" />`
+                : (currentUser.avatar_initials || 'U');
+
             const navAvatar = document.getElementById('navUserAvatar');
-            if (navAvatar) navAvatar.innerText = currentUser.avatar_initials || 'U';
+            if (navAvatar) navAvatar.innerHTML = avatarHtml;
             const headerAvatar = document.getElementById('headerUserAvatar');
-            if (headerAvatar) headerAvatar.innerText = currentUser.avatar_initials || 'U';
+            if (headerAvatar) headerAvatar.innerHTML = avatarHtml;
             const dashGreeting = document.getElementById('dashGreeting');
             if (dashGreeting) dashGreeting.innerText = `Good day, ${(currentUser.name || 'Friend').split(' ')[0]}! ✨`;
             const settlePayer = document.getElementById('settlePayerName');
             if (settlePayer) settlePayer.innerText = currentUser.name;
             const settleAvatar = document.getElementById('settlePayerAvatar');
-            if (settleAvatar) settleAvatar.innerText = currentUser.avatar_initials || 'U';
+            if (settleAvatar) settleAvatar.innerHTML = avatarHtml;
 
             const profName = document.getElementById('profileModalNameDisplay');
             if (profName) profName.innerText = currentUser.name;
             const profEmail = document.getElementById('profileModalEmailDisplay');
             if (profEmail) profEmail.innerText = currentUser.email;
             const profAvatar = document.getElementById('profileModalAvatar');
-            if (profAvatar) profAvatar.innerText = currentUser.avatar_initials || 'U';
+            if (profAvatar) profAvatar.innerHTML = avatarHtml;
 
             const headerCurrencyText = document.getElementById('headerCurrencyText');
             if (headerCurrencyText) {
@@ -7646,6 +8118,18 @@
             }
         }
 
+        function formatMoney(amount, currencyCode = null) {
+            const num = parseFloat(amount) || 0;
+            const targetCur = currencyCode || (currentUser && currentUser.default_currency) || 'INR';
+            const sym = getCurrencySymbol(targetCur);
+            let converted = num;
+            if (targetCur !== 'INR' && liveExchangeRates && liveExchangeRates[targetCur]) {
+                converted = num * liveExchangeRates[targetCur];
+            }
+            return `${sym}${converted.toLocaleString(targetCur === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        window.formatMoney = formatMoney;
+
         async function handleSaveCurrencyPreference() {
             const select = document.getElementById('userCurrencySelect');
             if (!select || !currentUser) return;
@@ -7666,6 +8150,11 @@
                     showProfileAlert(`✓ Default preferred currency set to ${chosen} (${getCurrencySymbol(chosen)})!`, 'success');
                     const badge = document.getElementById('activeCurrencyDisplayBadge');
                     if (badge) badge.innerText = `${chosen} (${getCurrencySymbol(chosen)})`;
+                    const headerText = document.getElementById('headerCurrencyText');
+                    if (headerText) headerText.innerText = `${chosen} (${getCurrencySymbol(chosen)})`;
+                    
+                    // Immediately re-fetch and re-render dashboard and lists
+                    await refreshAllData();
                 } else {
                     showToast(data.error || 'Failed to update currency preference', 'error');
                 }
@@ -7881,7 +8370,15 @@
             const alertEl = document.getElementById('profileModalAlert');
             if (alertEl) alertEl.classList.add('hidden');
 
-            document.getElementById('profileModalAvatar').innerText = currentUser.avatar_initials || 'U';
+            if (currentUser.avatar_url) {
+                document.getElementById('profileModalAvatar').innerHTML = `<img src="${currentUser.avatar_url}" class="w-full h-full object-cover rounded-full" />`;
+            } else {
+                document.getElementById('profileModalAvatar').innerText = currentUser.avatar_initials || 'U';
+            }
+            const saveDpBtn = document.getElementById('btnSaveProfileDp');
+            if (saveDpBtn) saveDpBtn.classList.add('hidden');
+            pendingProfileDpBase64 = null;
+
             document.getElementById('profileModalNameDisplay').innerText = currentUser.name;
             document.getElementById('profileModalEmailDisplay').innerText = currentUser.email;
 
@@ -7890,6 +8387,70 @@
 
         function closeProfileModal() {
             document.getElementById('profileModal').classList.add('hidden');
+        }
+
+        let pendingProfileDpBase64 = null;
+
+        function handleProfileDpSelected(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                showProfileAlert('Profile picture must be under 5MB.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                pendingProfileDpBase64 = evt.target.result;
+                const avatarEl = document.getElementById('profileModalAvatar');
+                if (avatarEl) {
+                    avatarEl.innerHTML = `<img src="${pendingProfileDpBase64}" class="w-full h-full object-cover rounded-full" />`;
+                }
+                const saveBtn = document.getElementById('btnSaveProfileDp');
+                if (saveBtn) saveBtn.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function handleSaveProfilePicture() {
+            if (!pendingProfileDpBase64 || !currentUser) return;
+            const saveBtn = document.getElementById('btnSaveProfileDp');
+            const originalHtml = saveBtn ? saveBtn.innerHTML : '';
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = `<span class="material-symbols-outlined text-[15px] animate-spin">sync</span><span>Saving...</span>`;
+            }
+
+            try {
+                const res = await fetch(`${API}/users/profile/picture`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-user-id': String(currentUser.id)
+                    },
+                    body: JSON.stringify({ image: pendingProfileDpBase64 })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    showProfileAlert(data.error || 'Failed to save profile picture', 'error');
+                    return;
+                }
+
+                currentUser.avatar_url = data.avatar_url;
+                updateUserProfileUI();
+                if (saveBtn) saveBtn.classList.add('hidden');
+                pendingProfileDpBase64 = null;
+                showToast('Profile picture saved successfully!', 'success');
+            } catch (err) {
+                console.error('Error saving profile picture:', err);
+                showProfileAlert('Error saving profile picture. Please try again.', 'error');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalHtml;
+                }
+            }
         }
 
         async function handleSaveProfile(e) {
@@ -7908,8 +8469,9 @@
             }
 
             if (new_password) {
-                if (new_password.length < 4) {
-                    showProfileAlert('New password must be at least 4 characters long', 'error');
+                const passErr = validateClientPasswordStrength(new_password);
+                if (passErr) {
+                    showProfileAlert(passErr, 'error');
                     return;
                 }
                 if (new_password !== confirm_password) {
@@ -8352,47 +8914,139 @@
             }
         }
 
-        function renderDashboardCharts() {
+        let spendingVelocityColorPalette = ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6', '#14b8a6', '#f97316', '#3b82f6'];
+
+        async function loadSpendingVelocityData() {
             const ctx = document.getElementById('dashboardTrendChart');
             if (!ctx) return;
+            const filterEl = document.getElementById('spendingVelocityGroupFilter');
+            const groupId = filterEl ? filterEl.value : '';
+            const membersList = document.getElementById('spendingVelocityMembersList');
 
-            if (dashChart) dashChart.destroy();
+            try {
+                const token = window.__splitwiseGetToken ? window.__splitwiseGetToken() : '';
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                if (currentUser && currentUser.id) headers['x-user-id'] = String(currentUser.id);
 
-            const labels = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
-            const yourData = [1800, 2400, 1900, 4200, 3100, balanceSummary.monthly_expenses || 4800];
-            const groupData = [3500, 4800, 3200, 9500, 6800, 12500];
+                const url = groupId 
+                    ? `${API}/analytics/spending-velocity?groupId=${encodeURIComponent(groupId)}`
+                    : `${API}/analytics/spending-velocity`;
 
-            dashChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Your Spend',
-                            data: yourData,
-                            backgroundColor: '#10b981',
-                            borderRadius: 6,
-                            barPercentage: 0.6
+                const res = await fetch(url, { headers });
+                if (!res.ok) {
+                    console.warn('Failed to load spending velocity:', res.status);
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) return;
+
+                if (dashChart) {
+                    dashChart.destroy();
+                    dashChart = null;
+                }
+
+                const months = data.months || ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'];
+                const datasets = (data.datasets || []).map((ds, idx) => {
+                    const color = ds.isCurrentUser ? '#10b981' : spendingVelocityColorPalette[idx % spendingVelocityColorPalette.length];
+                    return {
+                        label: ds.name || 'Member',
+                        data: ds.monthly || [],
+                        borderColor: color,
+                        backgroundColor: `${color}15`,
+                        borderWidth: ds.isCurrentUser ? 3 : 2,
+                        tension: 0.35,
+                        fill: ds.isCurrentUser,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: color
+                    };
+                });
+
+                dashChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
                         },
-                        {
-                            label: 'Group Share',
-                            data: groupData,
-                            backgroundColor: '#6366f1',
-                            borderRadius: 6,
-                            barPercentage: 0.6
+                        plugins: {
+                            legend: {
+                                display: datasets.length <= 4,
+                                position: 'top',
+                                labels: {
+                                    boxWidth: 10,
+                                    usePointStyle: true,
+                                    font: { size: 10, weight: 'bold' }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ₹${Number(context.raw || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { 
+                                grid: { color: 'rgba(200, 200, 200, 0.15)' },
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + Number(value).toLocaleString('en-IN');
+                                    }
+                                }
+                            }
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: { grid: { color: '#eceef0' }, beginAtZero: true }
+                    }
+                });
+
+                // Populate member spending chips
+                if (membersList) {
+                    if (data.datasets && data.datasets.length > 0) {
+                        membersList.innerHTML = data.datasets.map((ds, idx) => {
+                            const color = ds.isCurrentUser ? '#10b981' : spendingVelocityColorPalette[idx % spendingVelocityColorPalette.length];
+                            return `
+                                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-xs">
+                                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${color}"></span>
+                                    <span class="font-bold text-on-surface">${escapeChatHtml(ds.name)}</span>
+                                    <span class="font-mono text-on-surface-variant font-semibold">₹${Number(ds.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        membersList.innerHTML = '<span class="text-xs text-on-surface-variant">No spending activity recorded in this period.</span>';
                     }
                 }
-            });
+            } catch (err) {
+                console.error('Error rendering spending velocity:', err);
+            }
+        }
+
+        function renderDashboardCharts() {
+            // Populate circle filter dropdown
+            const filterEl = document.getElementById('spendingVelocityGroupFilter');
+            if (filterEl) {
+                const currentVal = filterEl.value;
+                let optionsHtml = '<option value="">My Overall Trajectory</option>';
+                if (Array.isArray(allGroups) && allGroups.length > 0) {
+                    optionsHtml += allGroups.map(g => `
+                        <option value="${g.id}" ${String(currentVal) === String(g.id) ? 'selected' : ''}>
+                            ${escapeChatHtml(g.name || 'Group')}
+                        </option>
+                    `).join('');
+                }
+                filterEl.innerHTML = optionsHtml;
+            }
+            loadSpendingVelocityData();
         }
 
         // -------------------------------------------------------------
@@ -9003,23 +9657,23 @@
         }
 
         function setSplitMode(mode) {
-            currentSplitMode = (mode || 'EQUAL').toUpperCase();
+            let normMode = (mode || 'EQUAL').toUpperCase();
+            if (normMode === 'EXACT') normMode = 'SMART_CUSTOM';
+            currentSplitMode = normMode;
             const btnEq = document.getElementById('splitModeBtnEqual');
             const btnShares = document.getElementById('splitModeBtnShares');
-            const btnEx = document.getElementById('splitModeBtnExact');
             const btnPct = document.getElementById('splitModeBtnPct');
             const btnSmart = document.getElementById('splitModeBtnSmart');
             const scSummaryBar = document.getElementById('smartCustomSummaryBar');
 
-            [btnEq, btnShares, btnEx, btnPct, btnSmart].forEach(b => {
+            [btnEq, btnShares, btnPct, btnSmart].forEach(b => {
                 if (b) b.className = 'py-1.5 text-xs font-bold rounded-lg transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1';
             });
 
             if (currentSplitMode === 'EQUAL' && btnEq) btnEq.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs';
-            if (currentSplitMode === 'SHARES' && btnShares) btnShares.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs';
-            if (currentSplitMode === 'EXACT' && btnEx) btnEx.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs';
-            if (currentSplitMode === 'PERCENTAGE' && btnPct) btnPct.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs';
             if (currentSplitMode === 'SMART_CUSTOM' && btnSmart) btnSmart.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs flex items-center justify-center gap-1';
+            if (currentSplitMode === 'SHARES' && btnShares) btnShares.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs';
+            if (currentSplitMode === 'PERCENTAGE' && btnPct) btnPct.className = 'py-1.5 text-xs font-bold rounded-lg transition-all bg-surface-container-lowest text-primary shadow-xs';
 
             if (scSummaryBar) {
                 if (currentSplitMode === 'SMART_CUSTOM') {
@@ -9175,7 +9829,7 @@
                 return `
                 <div class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20 member-split-row gap-1.5 sm:gap-2" data-user-id="${m.id}" data-is-locked="${isLocked ? 'true' : 'false'}">
                     <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-                        <input type="checkbox" checked onchange="onSplitCheckboxToggled()" class="split-cb rounded text-primary focus:ring-0">
+                        <input type="checkbox" checked onchange="onSplitCheckboxToggled()" class="split-cb rounded text-primary focus:ring-0 cursor-pointer">
                         <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary/20 text-primary font-bold text-[10px] sm:text-[11px] flex items-center justify-center flex-shrink-0">
                             ${m.avatar_initials || 'U'}
                         </div>
@@ -9188,19 +9842,70 @@
                             }">${m.role || 'member'}</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
                         <!-- Smart Custom Lock/Unlock Button -->
                         <button type="button" onclick="toggleSmartCustomLock(${m.id})" class="smart-custom-lock-toggle ${currentSplitMode === 'SMART_CUSTOM' ? '' : 'hidden'} px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border transition-all ${isLocked ? 'bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-xs' : 'bg-surface-container text-on-surface-variant border-outline-variant/30 hover:border-primary/40'}">
                             <span class="material-symbols-outlined text-[13px]">${isLocked ? 'lock' : 'lock_open'}</span>
                             <span class="sc-lock-label">${isLocked ? 'Locked' : 'Auto'}</span>
                         </button>
-                        <input type="number" step="1" min="0" value="0" oninput="onCustomSplitInput(this)" class="split-custom-input w-16 sm:w-20 text-right px-1.5 sm:px-2 py-1 rounded-lg bg-surface-container-low border border-outline-variant/40 text-xs font-bold text-on-surface focus:outline-none focus:border-primary tabular-nums" ${currentSplitMode === 'EQUAL' ? 'readonly' : ''}/>
+                        <!-- Mobile-Friendly Plus / Minus Touch Stepper -->
+                        <div class="flex items-center border border-outline-variant/40 rounded-lg overflow-hidden bg-surface-container-low shadow-2xs">
+                            <button type="button" onclick="stepMemberSplitAmount(${m.id}, -1)" class="w-6.5 h-6.5 sm:w-7 sm:h-7 flex items-center justify-center bg-surface-container hover:bg-surface-container-high text-on-surface font-black text-sm active:bg-primary/20 transition-all select-none touch-manipulation" title="Decrease Share">−</button>
+                            <input type="number" step="1" min="0" value="0" oninput="onCustomSplitInput(this)" class="split-custom-input w-13 sm:w-16 text-center px-0.5 sm:px-1 py-1 bg-transparent text-xs font-bold text-on-surface focus:outline-none tabular-nums" ${currentSplitMode === 'EQUAL' ? 'readonly' : ''}/>
+                            <button type="button" onclick="stepMemberSplitAmount(${m.id}, 1)" class="w-6.5 h-6.5 sm:w-7 sm:h-7 flex items-center justify-center bg-surface-container hover:bg-surface-container-high text-on-surface font-black text-sm active:bg-primary/20 transition-all select-none touch-manipulation" title="Increase Share">+</button>
+                        </div>
                         <span class="text-xs font-semibold text-on-surface-variant w-2.5 sm:w-3 split-suffix">₹</span>
-                        <span class="text-xs font-bold text-primary tabular-nums min-w-[50px] sm:min-w-[70px] text-right split-preview-amount">₹0.00</span>
+                        <span class="text-xs font-bold text-primary tabular-nums min-w-[45px] sm:min-w-[65px] text-right split-preview-amount">₹0.00</span>
                     </div>
                 </div>
             `;
             }).join('');
+        }
+
+        function toggleSelectAllSplitMembers(checked) {
+            const rows = document.querySelectorAll('.member-split-row');
+            rows.forEach(r => {
+                const cb = r.querySelector('.split-cb');
+                if (cb) cb.checked = !!checked;
+            });
+            onSplitModeChanged();
+        }
+
+        function stepMemberSplitAmount(userId, delta) {
+            const row = document.querySelector(`.member-split-row[data-user-id="${userId}"]`);
+            if (!row) return;
+            const cb = row.querySelector('.split-cb');
+            if (cb && !cb.checked) {
+                cb.checked = true;
+            }
+            const input = row.querySelector('.split-custom-input');
+            if (!input) return;
+
+            const total = parseFloat(document.getElementById('newExpenseAmount').value) || 0;
+
+            if (currentSplitMode === 'EQUAL') {
+                setSplitMode('SMART_CUSTOM');
+            }
+
+            if (currentSplitMode === 'SMART_CUSTOM') {
+                let currentVal = parseFloat(input.value) || 0;
+                const step = total >= 1000 ? 50 : (total >= 100 ? 10 : 1);
+                let newVal = Math.max(0, currentVal + (delta * step));
+                if (total > 0 && newVal > total) newVal = total;
+                smartCustomLocks[userId] = newVal;
+                input.value = newVal;
+                recalculateSmartCustomSplitsUI();
+            } else if (currentSplitMode === 'SHARES') {
+                let currentShares = parseFloat(input.value) || 0;
+                let newShares = Math.max(0, currentShares + delta);
+                input.value = newShares;
+                onCustomSplitInput(input);
+            } else if (currentSplitMode === 'PERCENTAGE') {
+                let currentPct = parseFloat(input.value) || 0;
+                let newPct = Math.min(100, Math.max(0, currentPct + (delta * 5)));
+                input.value = newPct.toFixed(2);
+                onCustomSplitInput(input);
+            }
         }
 
         // ==========================================
@@ -9962,11 +10667,14 @@
                 const myMembership = (g.members || []).find(m => Number(m && m.id) === Number(currentUser ? currentUser.id : 0));
                 const isCreator = currentUser && Number(g.created_by) === Number(currentUser.id);
                 const isAdmin = isCreator || (myMembership && myMembership.role === 'admin');
+                const coverStyle = g.cover_photo_url ? `background-image: url('${escapeChatHtml(g.cover_photo_url)}'); background-size: cover; background-position: center;` : '';
+                const iconHtml = g.icon_url ? `<img src="${escapeChatHtml(g.icon_url)}" class="w-full h-full object-cover rounded-xl" alt="Icon"/>` : escapeChatHtml(initials);
 
                 return `
                     <article class="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl border border-outline-variant/30 dark:border-slate-800 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
-                        <div class="h-24 p-4 flex items-start justify-between bg-gradient-to-r from-emerald-100/70 via-slate-100/80 to-teal-100/70 dark:from-emerald-950/70 dark:via-slate-800/90 dark:to-teal-950/50 border-b border-outline-variant/15 dark:border-white/5">
-                            <div class="flex items-center gap-1.5 flex-wrap">
+                        <div onclick="openGroupOverview('${g.id}')" class="h-28 p-4 flex items-start justify-between bg-gradient-to-r from-emerald-100/70 via-slate-100/80 to-teal-100/70 dark:from-emerald-950/70 dark:via-slate-800/90 dark:to-teal-950/50 border-b border-outline-variant/15 dark:border-white/5 cursor-pointer relative bg-cover bg-center" style="${coverStyle}">
+                            ${g.cover_photo_url ? '<div class="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]"></div>' : ''}
+                            <div class="flex items-center gap-1.5 flex-wrap relative z-10">
                                 <span class="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-slate-800/95 backdrop-blur-md text-emerald-800 dark:text-emerald-300 font-bold text-xs shadow-xs flex items-center gap-1 border border-outline-variant/20 dark:border-slate-700">
                                     <span class="material-symbols-outlined text-[15px] text-primary dark:text-emerald-400">groups</span>
                                     ${escapeChatHtml(g.category || 'General')}
@@ -9977,16 +10685,16 @@
                                     </span>
                                 ` : ''}
                             </div>
-                            <span class="px-2 py-0.5 rounded-lg bg-white/80 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-outline-variant/20 dark:border-slate-700">
+                            <span class="px-2 py-0.5 rounded-lg bg-white/80 dark:bg-slate-800/95 backdrop-blur-md text-slate-700 dark:text-slate-300 text-[11px] font-bold border border-outline-variant/20 dark:border-slate-700 relative z-10">
                                 ${g.member_count || (g.members ? g.members.length : 0)} Members
                             </span>
                         </div>
 
-                        <div class="p-6 flex-1 flex flex-col justify-between -mt-6">
+                        <div class="p-6 flex-1 flex flex-col justify-between -mt-6 relative z-10">
                             <div>
                                 <div class="flex items-start justify-between gap-3 mb-3">
-                                    <div class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-sm shadow-md">
-                                        ${initials}
+                                    <div onclick="openGroupOverview('${g.id}')" class="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-extrabold text-sm shadow-md cursor-pointer overflow-hidden border-2 border-surface">
+                                        ${iconHtml}
                                     </div>
                                     <div class="flex items-center -space-x-2 pt-2">
                                         ${(g.members || []).slice(0, 4).map(m => {
@@ -10002,7 +10710,7 @@
                                     </div>
                                 </div>
 
-                                <h3 class="text-base font-extrabold text-on-surface dark:text-white">${escapeChatHtml(groupName)}</h3>
+                                <h3 onclick="openGroupOverview('${g.id}')" class="text-base font-extrabold text-on-surface dark:text-white cursor-pointer hover:text-primary transition-colors">${escapeChatHtml(groupName)}</h3>
                                 <p class="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5 line-clamp-2">${escapeChatHtml(g.description || 'Collaborative shared expense circle')}</p>
                                 
                                 <div class="flex flex-wrap gap-1.5 mt-3">
@@ -10034,7 +10742,11 @@
                             </div>
 
                             <div class="mt-3 pt-3 border-t border-outline-variant/15 dark:border-slate-800/80 flex items-center justify-between gap-1.5 flex-wrap">
-                                <button onclick="openGroupExpensesModal('${g.id}')" class="flex-1 py-1.5 px-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 min-w-[70px]" title="View Group Expenses & Splits">
+                                <button onclick="openGroupOverview('${g.id}')" class="flex-1 py-1.5 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 min-w-[70px]" title="Open Circle Overview & WhatsApp Invite">
+                                    <span class="material-symbols-outlined text-[15px]">dashboard</span>
+                                    <span>Overview</span>
+                                </button>
+                                <button onclick="openGroupExpensesModal('${g.id}')" class="py-1.5 px-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1" title="View Group Expenses & Splits">
                                     <span class="material-symbols-outlined text-[15px]">receipt_long</span>
                                     <span>Expenses</span>
                                 </button>
@@ -10060,6 +10772,476 @@
                     </article>
                 `;
             }).join('');
+        }
+
+        // ==============================================================
+        // GROUP OVERVIEW, MEDIA, WHATSAPP INVITE & CO-MEMBER FRIEND REQUESTS
+        // ==============================================================
+        let activeOverviewGroupId = null;
+        let activeGroupInviteCode = null;
+        let pendingGroupCoverBase64 = null;
+        let pendingGroupIconBase64 = null;
+
+        async function openGroupOverview(groupId) {
+            activeOverviewGroupId = groupId;
+            const modal = document.getElementById('groupOverviewModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+
+            const g = (allGroups || []).find(grp => String(grp.id) === String(groupId));
+            const groupName = g ? (g.name || 'Group Circle') : 'Group Circle';
+            const initials = (groupName.trim().split(' ').map(n=>n[0]).join('') || 'G').substring(0, 2).toUpperCase();
+
+            // Setup banner and icon
+            const banner = document.getElementById('goCoverPhotoBanner');
+            if (banner) {
+                if (g && g.cover_photo_url) {
+                    banner.style.backgroundImage = `url('${g.cover_photo_url}')`;
+                    banner.style.backgroundSize = 'cover';
+                    banner.style.backgroundPosition = 'center';
+                } else {
+                    banner.style.backgroundImage = '';
+                }
+            }
+
+            const iconEl = document.getElementById('goGroupIcon');
+            if (iconEl) {
+                if (g && g.icon_url) {
+                    iconEl.innerHTML = `<img src="${g.icon_url}" class="w-full h-full object-cover rounded-2xl" alt="Icon"/>`;
+                } else {
+                    iconEl.innerHTML = escapeChatHtml(initials);
+                }
+            }
+
+            const nameEl = document.getElementById('goGroupName');
+            const catEl = document.getElementById('goGroupCategoryBadge');
+            const lockedEl = document.getElementById('goGroupLockedBadge');
+            const descEl = document.getElementById('goGroupDesc');
+            if (nameEl) nameEl.innerText = groupName;
+            if (catEl) catEl.innerText = (g && g.category) || 'General';
+            if (lockedEl) lockedEl.classList.toggle('hidden', !(g && g.is_locked));
+            if (descEl) descEl.innerText = (g && g.description) || 'Collaborative shared expense circle';
+
+            // Reset financial stats
+            const spendEl = document.getElementById('goTotalSpend');
+            const paidEl = document.getElementById('goTotalSettled');
+            const pendingEl = document.getElementById('goTotalPending');
+            const shareEl = document.getElementById('goUserNetShare');
+            if (spendEl) spendEl.innerText = 'Loading...';
+            if (paidEl) paidEl.innerText = 'Loading...';
+            if (pendingEl) pendingEl.innerText = 'Loading...';
+            if (shareEl) shareEl.innerText = 'Loading...';
+
+            const membersList = document.getElementById('goMembersList');
+            const expensesList = document.getElementById('goExpensesList');
+            if (membersList) membersList.innerHTML = '<div class="p-4 text-xs text-on-surface-variant col-span-full text-center">Loading members...</div>';
+            if (expensesList) expensesList.innerHTML = '<div class="p-4 text-xs text-on-surface-variant text-center">Loading expenses...</div>';
+
+            // Fetch invite link
+            try {
+                const invRes = await fetch(`${API}/groups/${groupId}/invite-link`);
+                if (invRes.ok) {
+                    const invData = await invRes.json();
+                    activeGroupInviteCode = invData.invite_code;
+                    window.__currentGroupInviteUrl = invData.invite_url;
+                    const waLink = document.getElementById('goWhatsAppShareLink');
+                    if (waLink) waLink.href = invData.whatsapp_url;
+                }
+            } catch(e) { console.error('Error fetching invite link:', e); }
+
+            // Fetch expenses & summary
+            try {
+                const res = await fetch(`${API}/groups/${groupId}/expenses`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const summary = data.summary || data.totals || {};
+                    const groupSpend = parseFloat(summary.total_spend || data.total_spend || 0);
+                    const groupPaid = parseFloat(summary.total_paid || data.total_paid || 0);
+                    const groupPending = parseFloat(summary.total_pending || data.total_pending || 0);
+                    const userNet = parseFloat((g && g.user_net_balance) || 0);
+
+                    if (spendEl) spendEl.innerText = `₹${groupSpend.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                    if (paidEl) paidEl.innerText = `₹${groupPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                    if (pendingEl) pendingEl.innerText = `₹${groupPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                    if (shareEl) {
+                        const isOwed = userNet >= 0;
+                        shareEl.className = `text-sm sm:text-base font-extrabold tabular-nums ${isOwed ? 'text-primary' : 'text-rose-500'}`;
+                        shareEl.innerText = `${isOwed ? '+' : ''}₹${userNet.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                    }
+
+                    // Render circle members with WhatsApp friend request buttons
+                    const groupMembers = (g && Array.isArray(g.members)) ? g.members : (data.members || []);
+                    const memberCountEl = document.getElementById('goMemberCountBadge');
+                    if (memberCountEl) memberCountEl.innerText = `${groupMembers.length} Members`;
+
+                    if (membersList) {
+                        if (!myFriends || myFriends.length === 0) {
+                            try {
+                                const fRes = await fetch(`${API}/friends?userId=${currentUser.id}`);
+                                if (fRes.ok) myFriends = await fRes.json();
+                            } catch(e) {}
+                        }
+
+                        membersList.innerHTML = groupMembers.map(m => {
+                            const isMe = currentUser && Number(m.id) === Number(currentUser.id);
+                            const mInitials = (m.avatar_initials) || (m.name ? m.name.substring(0, 2).toUpperCase() : 'U');
+                            const isFriend = !isMe && (myFriends || []).some(f => Number(f.id) === Number(m.id));
+
+                            return `
+                                <div class="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between gap-2.5">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/20 text-primary font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                            ${m.avatar_url ? `<img src="${m.avatar_url}" class="w-full h-full object-cover rounded-xl"/>` : escapeChatHtml(mInitials)}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <span class="text-xs font-bold text-on-surface block truncate">${escapeChatHtml(m.name)} ${isMe ? '(You)' : ''}</span>
+                                            <span class="text-[10px] text-on-surface-variant uppercase font-medium tracking-wider">${m.role || 'Member'}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        ${isMe ? `
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-container text-on-surface-variant">You</span>
+                                        ` : isFriend ? `
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                <span class="material-symbols-outlined text-[13px]">check_circle</span>
+                                                <span>Friends</span>
+                                            </span>
+                                        ` : `
+                                            <button type="button" onclick="sendFriendRequestToMember(${m.id}, '${escapeChatHtml(m.name)}')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary text-white shadow-xs hover:bg-primary-container transition-all">
+                                                <span class="material-symbols-outlined text-[13px]">person_add</span>
+                                                <span>Add Friend</span>
+                                            </button>
+                                        `}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    // Render circle expenses
+                    const expenses = Array.isArray(data.expenses) ? data.expenses : [];
+                    if (expensesList) {
+                        if (expenses.length === 0) {
+                            expensesList.innerHTML = `<div class="p-6 text-center text-xs text-on-surface-variant bg-surface-container-low/50 rounded-2xl border border-dashed border-outline-variant/30">No expenses recorded in this circle yet.</div>`;
+                        } else {
+                            expensesList.innerHTML = expenses.map(exp => {
+                                const expAmt = parseFloat(exp.amount || 0);
+                                const dateFormatted = new Date(exp.expense_date || exp.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                                return `
+                                    <div onclick="openExpenseDetailsModal(${exp.id})" class="p-3 rounded-2xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 cursor-pointer transition-all flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary font-bold text-xs flex items-center justify-center flex-shrink-0">
+                                                <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <span class="text-xs font-bold text-on-surface block truncate">${escapeChatHtml(exp.description || 'Expense')}</span>
+                                                <span class="text-[10px] text-on-surface-variant block">Paid by ${escapeChatHtml(exp.payer_name || 'Member')} • ${dateFormatted}</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right flex-shrink-0">
+                                            <span class="text-xs font-extrabold text-on-surface block tabular-nums">₹${expAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                            <span class="text-[10px] font-bold ${exp.is_fully_settled ? 'text-emerald-500' : 'text-amber-500'}">${exp.is_fully_settled ? 'Settled' : 'Pending'}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error('Error loading circle details:', e);
+            }
+        }
+
+        function closeGroupOverviewModal() {
+            const modal = document.getElementById('groupOverviewModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function openGroupMediaModal() {
+            const modal = document.getElementById('groupMediaModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            pendingGroupCoverBase64 = null;
+            pendingGroupIconBase64 = null;
+            const g = (allGroups || []).find(grp => String(grp.id) === String(activeOverviewGroupId));
+            const coverPreview = document.getElementById('groupCoverPreview');
+            const iconPreview = document.getElementById('groupIconPreview');
+            if (coverPreview) {
+                if (g && g.cover_photo_url) {
+                    coverPreview.style.backgroundImage = `url('${g.cover_photo_url}')`;
+                    coverPreview.innerHTML = '';
+                } else {
+                    coverPreview.style.backgroundImage = '';
+                    coverPreview.innerHTML = '<span class="material-symbols-outlined text-2xl text-on-surface-variant">add_photo_alternate</span><span class="text-[11px] text-on-surface-variant mt-1 font-medium">Click to choose cover photo</span>';
+                }
+            }
+            if (iconPreview) {
+                if (g && g.icon_url) {
+                    iconPreview.innerHTML = `<img src="${g.icon_url}" class="w-full h-full object-cover rounded-2xl"/>`;
+                } else {
+                    iconPreview.innerText = g ? (g.name ? g.name.substring(0, 2).toUpperCase() : 'GP') : 'GP';
+                }
+            }
+        }
+
+        function closeGroupMediaModal() {
+            const modal = document.getElementById('groupMediaModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function handleGroupCoverSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Cover photo must be under 5MB.', 'warning');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                pendingGroupCoverBase64 = e.target.result;
+                const coverPreview = document.getElementById('groupCoverPreview');
+                if (coverPreview) {
+                    coverPreview.style.backgroundImage = `url('${pendingGroupCoverBase64}')`;
+                    coverPreview.innerHTML = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleGroupIconSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Group icon must be under 5MB.', 'warning');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                pendingGroupIconBase64 = e.target.result;
+                const iconPreview = document.getElementById('groupIconPreview');
+                if (iconPreview) {
+                    iconPreview.innerHTML = `<img src="${pendingGroupIconBase64}" class="w-full h-full object-cover rounded-2xl"/>`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function handleSaveGroupMedia() {
+            if (!activeOverviewGroupId) return;
+            const btn = document.getElementById('btnSaveGroupMedia');
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerText = 'Uploading...'; }
+
+            try {
+                const res = await fetch(`${API}/groups/${activeOverviewGroupId}/media`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cover_photo: pendingGroupCoverBase64,
+                        icon: pendingGroupIconBase64
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(err.error || 'Failed to update group media', 'error');
+                    return;
+                }
+
+                const data = await res.json();
+                showToast('Group cover photo and icon saved successfully!', 'success');
+                closeGroupMediaModal();
+
+                const g = (allGroups || []).find(grp => String(grp.id) === String(activeOverviewGroupId));
+                if (g) {
+                    if (data.cover_photo_url) g.cover_photo_url = data.cover_photo_url;
+                    if (data.icon_url) g.icon_url = data.icon_url;
+                }
+
+                openGroupOverview(activeOverviewGroupId);
+                renderGroups();
+            } catch(e) {
+                showToast('Error saving group media.', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+            }
+        }
+
+        function copyGroupInviteLink() {
+            if (!window.__currentGroupInviteUrl) {
+                showToast('No invite link available.', 'warning');
+                return;
+            }
+            navigator.clipboard.writeText(window.__currentGroupInviteUrl).then(() => {
+                showToast('✓ WhatsApp Group Invite Link copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Could not copy link to clipboard.', 'error');
+            });
+        }
+
+        async function regenerateGroupInviteLink() {
+            if (!activeOverviewGroupId) return;
+            if (!confirm('Are you sure you want to regenerate this circle invite link? Previous invite links will be revoked.')) return;
+            try {
+                const res = await fetch(`${API}/groups/${activeOverviewGroupId}/regenerate-invite-link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser ? currentUser.id : undefined })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(err.error || 'Failed to regenerate invite link', 'error');
+                    return;
+                }
+                const data = await res.json();
+                activeGroupInviteCode = data.invite_code;
+                window.__currentGroupInviteUrl = data.invite_url;
+                const waLink = document.getElementById('goWhatsAppShareLink');
+                if (waLink) waLink.href = data.whatsapp_url;
+                showToast('✓ New secure WhatsApp invite link generated!', 'success');
+            } catch(e) {
+                showToast('Error regenerating invite link.', 'error');
+            }
+        }
+
+        async function sendFriendRequestToMember(targetUserId, targetName) {
+            if (!currentUser) return;
+            try {
+                const res = await fetch(`${API}/friends/request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser.id,
+                        targetUserId: targetUserId
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    showToast(data.error || 'Could not send friend request', 'error');
+                    return;
+                }
+                showToast(`✓ Friend request sent to ${targetName}!`, 'success');
+                if (activeOverviewGroupId) openGroupOverview(activeOverviewGroupId);
+            } catch(e) {
+                showToast('Error sending friend request.', 'error');
+            }
+        }
+
+        function quickAddExpenseToCircle() {
+            if (!activeOverviewGroupId) return;
+            closeGroupOverviewModal();
+            navigateTo('add-expense');
+            const groupSelect = document.getElementById('newExpenseGroup');
+            if (groupSelect) {
+                groupSelect.value = String(activeOverviewGroupId);
+                onGroupChanged();
+            }
+        }
+
+        function quickSettleUpForCircle() {
+            closeGroupOverviewModal();
+            navigateTo('settle');
+        }
+
+        let pendingJoinCode = null;
+
+        async function checkJoinHashOnLoad() {
+            const hash = window.location.hash || '';
+            if (hash.startsWith('#join/')) {
+                const code = hash.replace('#join/', '').trim();
+                if (code) {
+                    openGroupJoinPreview(code);
+                }
+            }
+        }
+
+        async function openGroupJoinPreview(inviteCode) {
+            pendingJoinCode = inviteCode;
+            const modal = document.getElementById('groupJoinPreviewModal');
+            if (!modal) return;
+
+            try {
+                const res = await fetch(`${API}/groups/join-info/${inviteCode}`);
+                if (!res.ok) {
+                    showToast('Invalid or expired group invite link.', 'error');
+                    return;
+                }
+                const data = await res.json();
+                const g = data.group;
+                if (!g) return;
+
+                modal.classList.remove('hidden');
+                const nameEl = document.getElementById('joinPreviewGroupName');
+                const descEl = document.getElementById('joinPreviewGroupDesc');
+                const countEl = document.getElementById('joinPreviewMemberCount');
+                const catEl = document.getElementById('joinPreviewCategory');
+                const coverEl = document.getElementById('joinPreviewCover');
+                const iconEl = document.getElementById('joinPreviewIcon');
+
+                if (nameEl) nameEl.innerText = g.name || 'Group Circle';
+                if (descEl) descEl.innerText = g.description || 'You\'ve been invited to join this shared expense circle on SplitWise.';
+                if (countEl) countEl.innerText = `${g.member_count || 0} Members`;
+                if (catEl) catEl.innerText = g.category || 'General';
+
+                if (coverEl) {
+                    if (g.cover_photo_url) coverEl.style.backgroundImage = `url('${g.cover_photo_url}')`;
+                    else coverEl.style.backgroundImage = '';
+                }
+                if (iconEl) {
+                    if (g.icon_url) iconEl.innerHTML = `<img src="${g.icon_url}" class="w-full h-full object-cover rounded-2xl"/>`;
+                    else iconEl.innerText = (g.name ? g.name.substring(0, 2).toUpperCase() : 'GP');
+                }
+            } catch(e) {
+                showToast('Error loading group invitation details.', 'error');
+            }
+        }
+
+        function closeGroupJoinPreviewModal() {
+            const modal = document.getElementById('groupJoinPreviewModal');
+            if (modal) modal.classList.add('hidden');
+            if (window.location.hash.startsWith('#join/')) {
+                window.location.hash = '';
+            }
+        }
+
+        async function handleConfirmJoinGroup() {
+            if (!pendingJoinCode) return;
+            if (!currentUser) {
+                sessionStorage.setItem('pending_join_code', pendingJoinCode);
+                showToast('Please sign in or create an account to join the group.', 'info');
+                closeGroupJoinPreviewModal();
+                toggleAuthMode(false);
+                return;
+            }
+
+            const btn = document.getElementById('btnConfirmJoinGroup');
+            if (btn) { btn.disabled = true; btn.innerText = 'Joining Circle...'; }
+
+            try {
+                const res = await fetch(`${API}/groups/join/${pendingJoinCode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    showToast(data.error || 'Failed to join group', 'error');
+                    return;
+                }
+
+                showToast(`✓ Welcome! You have joined "${data.group_name || 'the circle'}"!`, 'success');
+                if (window.confetti) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                closeGroupJoinPreviewModal();
+                await refreshAllData();
+                navigateTo('groups');
+                if (data.group_id) openGroupOverview(data.group_id);
+            } catch(e) {
+                showToast('Error joining group.', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = 'Join Circle Now'; }
+            }
         }
 
         async function openGroupExpensesModal(groupId) {
@@ -11707,8 +12889,20 @@
             if (recNameEl) recNameEl.innerText = name;
             if (recAvEl) recAvEl.innerText = initials || 'U';
             if (amtEl) { amtEl.value = (amount && amount > 0) ? amount : ''; amtEl.disabled = false; }
-            const receiverUpi = upi || `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
-            if (upiEl) upiEl.innerText = receiverUpi;
+            
+            // Validate real receiver UPI ID - Never generate or display fake @okaxis IDs
+            const candidateUpi = (upi && upi.includes('@') && !upi.endsWith('@okaxis')) 
+                ? upi.trim() 
+                : (selectedPeer.upi_id && selectedPeer.upi_id.includes('@') && !selectedPeer.upi_id.endsWith('@okaxis') ? selectedPeer.upi_id.trim() : '');
+            
+            if (upiEl) {
+                if (candidateUpi) {
+                    upiEl.innerText = candidateUpi;
+                    upiEl.className = 'font-mono text-on-surface font-bold';
+                } else {
+                    upiEl.innerHTML = '<span class="text-rose-500 font-semibold text-[11px]">Not configured (QR Unavailable)</span>';
+                }
+            }
 
             // 2. Reset UI card visibilities
             const pStation = document.getElementById('upiProcessingStation');
@@ -11728,11 +12922,18 @@
             if (qrBox) { qrBox.innerHTML = ''; qrBox.classList.add('hidden'); }
             const badge = document.getElementById('upiLiveStatusBadge');
             if (badge) {
-                badge.className = 'qw-badge bg-sky-500/10 text-sky-500 border border-sky-500/20';
-                badge.innerText = 'Ready to Generate';
+                badge.className = candidateUpi ? 'qw-badge bg-sky-500/10 text-sky-500 border border-sky-500/20' : 'qw-badge bg-rose-500/10 text-rose-500 border border-rose-500/20';
+                badge.innerText = candidateUpi ? 'Ready to Generate' : 'UPI ID Missing';
             }
             const waitText = document.getElementById('upiPollingStatusText');
-            setSettleActionsEnabled({ generate: true, pay: false, intent: false });
+            if (waitText) {
+                if (!candidateUpi) {
+                    waitText.innerHTML = `<span class="text-rose-500 font-medium">⚠️ ${escapeChatHtml(name)} has not configured a UPI ID. QR payment is unavailable. Please select Cash or Bank Transfer above.</span>`;
+                } else {
+                    waitText.innerText = 'Click "Generate Payment QR" when ready.';
+                }
+            }
+            setSettleActionsEnabled({ generate: !!candidateUpi, pay: false, intent: false });
             const markPaidBtn = document.getElementById('btnMarkPaidExternal');
             if (markPaidBtn) markPaidBtn.disabled = false;
             loadPeerOutstandingExpenses(userId);
@@ -11773,20 +12974,28 @@
 
                 // No implicit payment request: the user must press "Generate Payment QR".
                 if (!currentUpiRequestId) {
+                    const candidateUpi = (selectedPeer && selectedPeer.upi && selectedPeer.upi.includes('@') && !selectedPeer.upi.endsWith('@okaxis'))
+                        ? selectedPeer.upi.trim()
+                        : (selectedPeer && selectedPeer.upi_id && selectedPeer.upi_id.includes('@') && !selectedPeer.upi_id.endsWith('@okaxis') ? selectedPeer.upi_id.trim() : '');
+
                     const badge = document.getElementById('upiLiveStatusBadge');
                     if (badge) {
-                        badge.className = 'qw-badge bg-sky-500/10 text-sky-500 border border-sky-500/20';
-                        badge.innerText = 'Ready to Generate';
+                        badge.className = candidateUpi ? 'qw-badge bg-sky-500/10 text-sky-500 border border-sky-500/20' : 'qw-badge bg-rose-500/10 text-rose-500 border border-rose-500/20';
+                        badge.innerText = candidateUpi ? 'Ready to Generate' : 'UPI ID Missing';
                     }
                     const waitText = document.getElementById('upiPollingStatusText');
                     if (waitText) {
-                        waitText.innerText = selectedPeer
-                            ? 'Click "Generate Payment QR" to create a payment request when you are ready.'
-                            : 'Choose a peer on the left to begin.';
+                        if (selectedPeer && !candidateUpi) {
+                            waitText.innerHTML = `<span class="text-rose-500 font-medium">⚠️ ${escapeChatHtml(selectedPeer.name)} has not configured a UPI ID. QR payment is unavailable. Please select Cash or Bank Transfer above.</span>`;
+                        } else {
+                            waitText.innerText = selectedPeer
+                                ? 'Click "Generate Payment QR" to create a payment request when you are ready.'
+                                : 'Choose a peer on the left to begin.';
+                        }
                     }
                     const qrBox = document.getElementById('upiQrCodeContainer');
                     if (qrBox) { qrBox.innerHTML = ''; qrBox.classList.add('hidden'); }
-                    setSettleActionsEnabled({ generate: !!selectedPeer, pay: false, intent: false });
+                    setSettleActionsEnabled({ generate: !!(selectedPeer && candidateUpi), pay: false, intent: false });
                 }
             } else {
                 if (normMethod === 'CASH' && bC) bC.className = 'pm-tab active py-2.5 px-2 sm:px-3 rounded-xl bg-primary text-white text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm min-h-[42px] border border-primary';
@@ -11813,7 +13022,46 @@
                 if (waitText) waitText.innerText = 'Enter a settlement amount greater than zero to generate a QR.';
                 return;
             }
-            const upi = document.getElementById('settleDisplayUpi')?.innerText || selectedPeer.upi || `${selectedPeer.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
+
+            // Real Receiver UPI Validation - Never generate fake UPI or QR code!
+            const rawUpi = document.getElementById('settleDisplayUpi')?.innerText || selectedPeer.upi || selectedPeer.upi_id || '';
+            const upi = (rawUpi.includes('@') && !rawUpi.endsWith('@okaxis') && !rawUpi.includes('Not configured')) ? rawUpi.trim() : '';
+
+            if (!upi) {
+                const waitText = document.getElementById('upiPollingStatusText');
+                if (waitText) {
+                    waitText.innerHTML = `
+                        <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-left text-xs space-y-2">
+                            <div class="flex items-center gap-2 font-bold text-sm">
+                                <span class="material-symbols-outlined text-[18px]">warning</span>
+                                <span>QR Code Generation Unavailable</span>
+                            </div>
+                            <p><strong>${escapeChatHtml(selectedPeer.name)}</strong> has not configured a UPI ID in their account settings yet.</p>
+                            <p class="font-semibold text-on-surface">Please use an alternative payment option to settle balances:</p>
+                            <div class="flex items-center gap-2 pt-1 flex-wrap">
+                                <button type="button" onclick="setPaymentMethod('CASH')" class="px-3.5 py-1.5 rounded-xl bg-primary text-white font-bold text-xs shadow-xs flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[15px]">payments</span>
+                                    <span>Settle with Cash</span>
+                                </button>
+                                <button type="button" onclick="setPaymentMethod('BANK')" class="px-3.5 py-1.5 rounded-xl bg-surface-container text-on-surface font-bold text-xs border border-outline-variant hover:bg-surface-container-high flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[15px]">account_balance</span>
+                                    <span>Direct Bank Transfer</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                const statusBadge = document.getElementById('upiLiveStatusBadge');
+                if (statusBadge) {
+                    statusBadge.className = 'qw-badge bg-rose-500/10 text-rose-500 border border-rose-500/20';
+                    statusBadge.innerText = 'UPI ID Unavailable';
+                }
+                const qrBox = document.getElementById('upiQrCodeContainer');
+                if (qrBox) { qrBox.innerHTML = ''; qrBox.classList.add('hidden'); }
+                setSettleActionsEnabled({ generate: false, pay: false, intent: false });
+                showToast(`QR payment unavailable: ${selectedPeer.name} has not set up a UPI ID.`, 'warning', 4500);
+                return;
+            }
 
             if (upiStatusPollInterval) {
                 clearInterval(upiStatusPollInterval);
@@ -12621,14 +13869,9 @@
                 `;
             }).join('');
 
-            // Auto-select first conversation if none selected, or keep current
-            if (filteredConversations.length > 0) {
-                const exists = currentActiveConversationId ? filteredConversations.find(c => c.id === currentActiveConversationId) : null;
-                if (exists) {
-                    selectConversation(exists.id);
-                } else if (!currentActiveConversationId) {
-                    selectConversation(filteredConversations[0].id);
-                }
+            // Auto-select first conversation only if none currently active
+            if (filteredConversations.length > 0 && !currentActiveConversationId) {
+                selectConversation(filteredConversations[0].id);
             }
         }
 
@@ -12762,6 +14005,14 @@
             currentActiveConversationId = convId;
             const conv = activeConversations.find(c => c.id === convId);
 
+            // Responsive mobile panel switch
+            const listPanel = document.getElementById('chatConversationsPanel');
+            const threadPanel = document.getElementById('activeChatThreadPanel');
+            if (listPanel && threadPanel) {
+                listPanel.classList.add('hidden', 'lg:flex');
+                threadPanel.classList.remove('hidden');
+            }
+
             // Update Header
             const titleEl = document.getElementById('activeChatTitle');
             const subEl = document.getElementById('activeChatSubtitle');
@@ -12777,9 +14028,37 @@
             }
             if (btn) btn.disabled = false;
 
+            // Mark received messages as read
+            try {
+                await fetch(`${API}/chat/conversations/${convId}/read`, {
+                    method: 'POST',
+                    headers: { 'x-user-id': String(currentUser.id) }
+                });
+            } catch (err) {
+                console.error('Error marking conversation read:', err);
+            }
+
             // Load messages
             await loadActiveConversationMessages(convId);
             await updateChatUnreadBadge();
+        }
+
+        function closeActiveMobileChat() {
+            const listPanel = document.getElementById('chatConversationsPanel');
+            const threadPanel = document.getElementById('activeChatThreadPanel');
+            if (listPanel && threadPanel) {
+                listPanel.classList.remove('hidden');
+                threadPanel.classList.add('hidden', 'lg:flex');
+            }
+            currentActiveConversationId = null;
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
         async function loadActiveConversationMessages(convId) {
@@ -12822,7 +14101,7 @@
                         <div class="h-full flex flex-col items-center justify-center text-center text-on-surface-variant p-6 space-y-1">
                             <span class="material-symbols-outlined text-3xl text-primary/60">chat_bubble_outline</span>
                             <p class="font-bold text-xs text-on-surface">No messages yet</p>
-                            <p class="text-[11px]">Send a greeting or start discussing expenses!</p>
+                            <p class="text-[11px]">Send a greeting, sticker, or receipt!</p>
                         </div>
                     `;
                     return;
@@ -12831,25 +14110,81 @@
                 msgArea.innerHTML = activeChatMessages.map(m => {
                     const isMe = m.sender_id === currentUser.id;
                     const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    // Read receipt status checkmarks for current user
+                    let statusHtml = '';
+                    if (isMe) {
+                        if (m.read_at) {
+                            statusHtml = `<span class="text-sky-400 font-bold ml-1" title="Read">✓✓</span>`;
+                        } else if (m.delivered_at) {
+                            statusHtml = `<span class="opacity-70 ml-1" title="Delivered">✓✓</span>`;
+                        } else {
+                            statusHtml = `<span class="opacity-70 ml-1" title="Sent">✓</span>`;
+                        }
+                    }
+
+                    // Sender Avatar
+                    const senderAvatarHtml = m.sender_avatar_url
+                        ? `<img src="${m.sender_avatar_url}" class="w-7 h-7 rounded-full object-cover flex-shrink-0"/>`
+                        : `<div class="w-7 h-7 rounded-full ${isMe ? 'bg-primary/20 text-primary' : 'bg-secondary-container text-on-secondary-container'} font-bold text-[10px] flex items-center justify-center flex-shrink-0">${escapeChatHtml(isMe ? (currentUser.avatar_initials || 'ME') : (m.sender_avatar || 'U'))}</div>`;
+
+                    // Content rendering based on message_type
+                    let contentHtml = '';
+                    const msgType = m.message_type || 'text';
+
+                    if (msgType === 'image') {
+                        contentHtml = `
+                            <div>
+                                <img src="${m.media_url}" class="rounded-xl max-h-56 max-w-full object-cover cursor-pointer mb-1 shadow-sm hover:opacity-95 transition-opacity" onclick="window.open('${m.media_url}', '_blank')"/>
+                                ${m.message ? `<p class="text-xs break-words mt-1">${escapeChatHtml(m.message)}</p>` : ''}
+                            </div>
+                        `;
+                    } else if (msgType === 'file' || msgType === 'document') {
+                        contentHtml = `
+                            <div>
+                                <a href="${m.media_url}" target="_blank" download class="flex items-center gap-2.5 p-2.5 rounded-xl ${isMe ? 'bg-white/15 hover:bg-white/25' : 'bg-surface-container-high hover:bg-surface-container-highest'} transition-colors">
+                                    <span class="material-symbols-outlined text-[24px]">description</span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-bold truncate">${escapeChatHtml(m.file_name || 'Attached File')}</p>
+                                        <span class="text-[10px] opacity-75">${formatFileSize(m.file_size)} • Tap to download</span>
+                                    </div>
+                                    <span class="material-symbols-outlined text-[18px]">download</span>
+                                </a>
+                                ${m.message ? `<p class="text-xs break-words mt-1.5">${escapeChatHtml(m.message)}</p>` : ''}
+                            </div>
+                        `;
+                    } else if (msgType === 'gif') {
+                        contentHtml = `
+                            <div>
+                                <img src="${m.media_url}" class="rounded-xl max-h-48 max-w-full object-cover mb-1 shadow-sm" alt="GIF"/>
+                                ${m.message ? `<p class="text-xs break-words mt-1">${escapeChatHtml(m.message)}</p>` : ''}
+                            </div>
+                        `;
+                    } else if (msgType === 'sticker') {
+                        contentHtml = `
+                            <div class="text-sm font-bold flex items-center gap-1.5 py-0.5">
+                                ${escapeChatHtml(m.message)}
+                            </div>
+                        `;
+                    } else {
+                        // Regular text
+                        contentHtml = `<p class="text-xs break-words">${escapeChatHtml(m.message)}</p>`;
+                    }
+
                     return `
                         <div class="flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}">
-                            ${!isMe ? `
-                                <div class="w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container font-bold text-[10px] flex items-center justify-center flex-shrink-0">
-                                    ${escapeChatHtml(m.sender_avatar || 'U')}
-                                </div>
-                            ` : ''}
+                            ${!isMe ? senderAvatarHtml : ''}
                             <div class="max-w-[75%] space-y-0.5">
                                 ${!isMe ? `<span class="text-[10px] text-on-surface-variant font-medium ml-1">${escapeChatHtml(m.sender_name || 'Member')}</span>` : ''}
                                 <div class="p-3 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none shadow-xs' : 'bg-surface-container text-on-surface rounded-bl-none'}">
-                                    <p class="text-xs break-words">${escapeChatHtml(m.message)}</p>
+                                    ${contentHtml}
                                 </div>
-                                <span class="text-[9px] text-on-surface-variant block ${isMe ? 'text-right' : 'text-left'}">${timeStr}</span>
+                                <span class="text-[9px] text-on-surface-variant flex items-center ${isMe ? 'justify-end' : 'justify-start'} gap-0.5">
+                                    ${timeStr}
+                                    ${statusHtml}
+                                </span>
                             </div>
-                            ${isMe ? `
-                                <div class="w-7 h-7 rounded-full bg-primary/20 text-primary font-bold text-[10px] flex items-center justify-center flex-shrink-0">
-                                    ${escapeChatHtml(currentUser.avatar_initials || 'ME')}
-                                </div>
-                            ` : ''}
+                            ${isMe ? senderAvatarHtml : ''}
                         </div>
                     `;
                 }).join('');
@@ -12864,7 +14199,7 @@
         async function sendActiveChatMessage() {
             if (!currentUser || !currentActiveConversationId) return;
             const input = document.getElementById('chatMessageInput');
-            const sendBtn = input?.parentElement?.querySelector('button');
+            const sendBtn = document.getElementById('chatSendBtn');
             if (!input) return;
             const message = (input.value || '').trim();
             if (!message) return;
@@ -12926,6 +14261,186 @@
                 input.disabled = false;
                 if (sendBtn) sendBtn.disabled = false;
                 input.focus();
+            }
+        }
+
+        async function handleChatAttachmentSelected(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file || !currentActiveConversationId || !currentUser) return;
+
+            if (file.size > 10 * 1024 * 1024) {
+                showToast('Attachment must be under 10MB.', 'error');
+                e.target.value = '';
+                return;
+            }
+
+            showToast('Uploading attachment...', 'info');
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                try {
+                    const uploadRes = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/attachment`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-user-id': String(currentUser.id)
+                        },
+                        body: JSON.stringify({
+                            file_data: evt.target.result,
+                            file_name: file.name,
+                            file_type: file.type || 'application/octet-stream'
+                        })
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (!uploadRes.ok) {
+                        showToast(uploadData.error || 'Failed to upload attachment', 'error');
+                        return;
+                    }
+
+                    // Send message referencing the attachment
+                    const sendRes = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-user-id': String(currentUser.id)
+                        },
+                        body: JSON.stringify({
+                            message: file.name,
+                            message_type: uploadData.message_type || 'document',
+                            media_url: uploadData.media_url,
+                            file_name: uploadData.file_name,
+                            file_size: uploadData.file_size
+                        })
+                    });
+
+                    if (!sendRes.ok) {
+                        showToast('Failed to post attachment message', 'error');
+                        return;
+                    }
+
+                    await loadActiveConversationMessages(currentActiveConversationId);
+                    loadChatConversations();
+                    showToast('Attachment sent!', 'success');
+                } catch (err) {
+                    console.error('Error uploading chat attachment:', err);
+                    showToast('Failed to upload attachment', 'error');
+                } finally {
+                    e.target.value = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        const CHAT_EMOJIS = ['😊', '😂', '🔥', '👍', '❤️', '🎉', '💸', '💰', '💳', '🍕', '☕', '🚗', '✈️', '🏠', '🛒', '⚡', '🙌', '🤝', '💯', '✨', '🙏', '🧾', '📊', '✅'];
+        const CHAT_GIFS = [
+            { title: 'Money Flow', url: 'https://media.giphy.com/media/l0Ex6kAKAoFRsFhIE/giphy.gif' },
+            { title: 'Calculating', url: 'https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif' },
+            { title: 'Deal Done', url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif' },
+            { title: 'Celebrate', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
+            { title: 'Thank You', url: 'https://media.giphy.com/media/3oEdva9BUHPI92Ty4o/giphy.gif' },
+            { title: 'Expense Shock', url: 'https://media.giphy.com/media/26ueYUlPAmUkTBAM8/giphy.gif' }
+        ];
+
+        function toggleChatEmojiPicker(forceState) {
+            const popover = document.getElementById('chatEmojiPickerPopover');
+            if (!popover) return;
+            const shouldOpen = forceState !== undefined ? forceState : popover.classList.contains('hidden');
+            if (shouldOpen) {
+                toggleChatGifPicker(false);
+                const grid = document.getElementById('chatEmojiGrid');
+                if (grid && !grid.hasChildNodes()) {
+                    grid.innerHTML = CHAT_EMOJIS.map(em => `
+                        <button type="button" onclick="insertChatEmoji('${em}')" class="p-1.5 hover:bg-surface-container rounded-lg transition-transform hover:scale-125 flex items-center justify-center">${em}</button>
+                    `).join('');
+                }
+                popover.classList.remove('hidden');
+            } else {
+                popover.classList.add('hidden');
+            }
+        }
+
+        function insertChatEmoji(emoji) {
+            const input = document.getElementById('chatMessageInput');
+            if (input) {
+                input.value = (input.value || '') + emoji;
+                input.focus();
+            }
+            toggleChatEmojiPicker(false);
+        }
+
+        function toggleChatGifPicker(forceState) {
+            const popover = document.getElementById('chatGifPickerPopover');
+            if (!popover) return;
+            const shouldOpen = forceState !== undefined ? forceState : popover.classList.contains('hidden');
+            if (shouldOpen) {
+                toggleChatEmojiPicker(false);
+                const grid = document.getElementById('chatGifsGrid');
+                if (grid && !grid.hasChildNodes()) {
+                    grid.innerHTML = CHAT_GIFS.map(g => `
+                        <div onclick="sendChatMediaDirect('${g.url}', 'gif')" class="cursor-pointer rounded-xl overflow-hidden border border-outline-variant hover:border-primary transition-all hover:scale-[1.02]">
+                            <img src="${g.url}" alt="${g.title}" class="w-full h-24 object-cover"/>
+                            <div class="p-1 bg-surface-container text-center text-[10px] font-bold text-on-surface truncate">${g.title}</div>
+                        </div>
+                    `).join('');
+                }
+                popover.classList.remove('hidden');
+            } else {
+                popover.classList.add('hidden');
+            }
+        }
+
+        async function sendChatSticker(stickerText) {
+            if (!currentActiveConversationId || !currentUser) return;
+            toggleChatEmojiPicker(false);
+
+            try {
+                const res = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-user-id': String(currentUser.id)
+                    },
+                    body: JSON.stringify({
+                        message: stickerText,
+                        message_type: 'sticker'
+                    })
+                });
+                if (!res.ok) {
+                    showToast('Failed to send sticker', 'error');
+                    return;
+                }
+                await loadActiveConversationMessages(currentActiveConversationId);
+                loadChatConversations();
+            } catch (err) {
+                console.error('Error sending sticker:', err);
+            }
+        }
+
+        async function sendChatMediaDirect(mediaUrl, messageType = 'gif') {
+            if (!currentActiveConversationId || !currentUser) return;
+            toggleChatGifPicker(false);
+
+            try {
+                const res = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-user-id': String(currentUser.id)
+                    },
+                    body: JSON.stringify({
+                        message: '',
+                        message_type: messageType,
+                        media_url: mediaUrl
+                    })
+                });
+                if (!res.ok) {
+                    showToast('Failed to send media', 'error');
+                    return;
+                }
+                await loadActiveConversationMessages(currentActiveConversationId);
+                loadChatConversations();
+            } catch (err) {
+                console.error('Error sending media:', err);
             }
         }
         // -------------------------------------------------------------
@@ -14363,15 +15878,23 @@
 
             // Route guard for hash changes
             window.addEventListener('hashchange', () => {
-                const hash = window.location.hash ? window.location.hash.replace('#', '') : '';
+                const rawHash = window.location.hash || '';
+                if (rawHash.startsWith('#join/')) {
+                    checkJoinHashOnLoad();
+                    return;
+                }
+                const hash = rawHash.replace('#', '');
                 if (hash) {
                     if (!currentUser) {
                         handleLogout();
-                    } else if (['dashboard', 'expenses', 'groups', 'add-expense', 'settle', 'analytics', 'activity', 'chat'].includes(hash)) {
+                    } else if (['dashboard', 'expenses', 'groups', 'add-expense', 'settle', 'analytics', 'activity', 'chat', 'friends'].includes(hash)) {
                         navigateTo(hash);
                     }
                 }
             });
+
+            // Check if loaded with WhatsApp join invite link
+            checkJoinHashOnLoad();
         });
     </script>
 </body>

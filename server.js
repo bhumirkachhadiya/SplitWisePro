@@ -5,6 +5,7 @@ if (dns && typeof dns.setDefaultResultOrder === 'function') {
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
@@ -14,8 +15,8 @@ require('dotenv').config();
 
 const app = express();
 app.disable('x-powered-by');
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: false, limit: '25mb' }));
 
 // Centralized SplitWise Email Service
 const emailService = require('./emailService');
@@ -72,6 +73,7 @@ const PUBLIC_ASSET_ROUTES = {
 Object.entries(PUBLIC_ASSET_ROUTES).forEach(([route, file]) => {
     app.get(route, (req, res) => res.sendFile(path.join(__dirname, file)));
 });
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/robots.txt', (req, res) => {
     res.type('text/plain').send('User-agent: *\nDisallow: /api/\n');
 });
@@ -100,6 +102,7 @@ const PUBLIC_API_ROUTES = new Set([
 
 function isPublicApiRoute(req) {
     const mountPath = (req.path || '').replace(/\/+$/, '') || '/';
+    if (req.method === 'GET' && mountPath.startsWith('/groups/join-info/')) return true;
     return PUBLIC_API_ROUTES.has(`${req.method.toUpperCase()} ${mountPath}`);
 }
 
@@ -670,6 +673,23 @@ async function sendOtpEmail({ to, otp, purpose, name }) {
     }
 }
 
+// Password Strength Validator (Req 10)
+function validatePasswordStrength(password) {
+    if (!password || typeof password !== 'string') {
+        return 'Password is required.';
+    }
+    if (password.length < 8) {
+        return 'Password must contain at least 8 characters.';
+    }
+    if (!/[A-Z]/.test(password)) {
+        return 'Password must contain at least one uppercase letter (A-Z).';
+    }
+    if (!/[a-z]/.test(password)) {
+        return 'Password must contain at least one lowercase letter (a-z).';
+    }
+    return null;
+}
+
 // -------------------------------------------------------------
 // OTP ROUTE 1: SIGNUP - SEND OTP
 // -------------------------------------------------------------
@@ -700,9 +720,9 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
                 return res.status(400).json({ error: 'Please enter a valid UPI ID (e.g. name@okaxis or 9876543210@upi).' });
             }
         }
-
-        if (!password || password.length < 8) {
-            return res.status(400).json({ error: 'Password must contain at least 8 characters.' });
+        const passwordErr = validatePasswordStrength(password);
+        if (passwordErr) {
+            return res.status(400).json({ error: passwordErr });
         }
 
         const normalizedEmail = email.trim().toLowerCase();
@@ -1109,8 +1129,9 @@ const handleCompletePasswordReset = async (req, res) => {
         if (!email || !new_password) {
             return res.status(400).json({ error: 'Please enter your email and new password.' });
         }
-        if (new_password.length < 8) {
-            return res.status(400).json({ error: 'Password must contain at least 8 characters.' });
+        const passwordErr = validatePasswordStrength(new_password);
+        if (passwordErr) {
+            return res.status(400).json({ error: passwordErr });
         }
         if (confirm_password && new_password !== confirm_password) {
             return res.status(400).json({ error: 'Passwords do not match. Please verify and try again.' });
@@ -1523,6 +1544,7 @@ app.get('/api/auth/session', async (req, res) => {
             username: req.authUser.username,
             role: req.authUser.role,
             avatar_initials: req.authUser.avatar_initials,
+            avatar_url: req.authUser.avatar_url,
             upi_id: req.authUser.upi_id,
             phone: req.authUser.phone,
             default_currency: req.authUser.default_currency,
@@ -1587,7 +1609,7 @@ app.get('/api/users', async (req, res) => {
 
         // Return only current user and their confirmed friends or group peers
         const result = await pool.query(`
-            SELECT DISTINCT u.id, u.name, u.email, u.avatar_initials, u.upi_id, u.phone, u.user_code, u.role
+            SELECT DISTINCT u.id, u.name, u.email, u.avatar_initials, u.avatar_url, u.upi_id, u.phone, u.user_code, u.role
             FROM users u
             WHERE u.id = $1
                OR u.id IN (SELECT friend_id FROM friends WHERE user_id = $1)
@@ -1661,8 +1683,9 @@ app.put('/api/users/:id', async (req, res) => {
         }
 
         if (wantsPasswordChange) {
-            if (new_password.length < 8) {
-                return res.status(400).json({ error: 'New password must contain at least 8 characters.' });
+            const passwordErr = validatePasswordStrength(new_password);
+            if (passwordErr) {
+                return res.status(400).json({ error: passwordErr });
             }
             passwordHash = await bcrypt.hash(new_password, 10);
         }
@@ -1673,7 +1696,7 @@ app.put('/api/users/:id', async (req, res) => {
             UPDATE users 
             SET name = $1, email = $2, phone = $3, upi_id = $4, avatar_initials = $5, password_hash = $6, updated_at = NOW()
             WHERE id = $7
-            RETURNING id, name, email, username, role, avatar_initials, upi_id, phone, default_currency, user_code
+            RETURNING id, name, email, username, role, avatar_initials, avatar_url, upi_id, phone, default_currency, user_code
         `, [
             sanitizeText(name, 150), 
             email.trim().toLowerCase(), 
@@ -1695,6 +1718,65 @@ app.put('/api/users/:id', async (req, res) => {
             return res.status(400).json({ error: 'This email is already registered.' });
         }
         res.status(500).json({ error: formatUserError(err, 'Failed to update profile.') });
+    }
+});
+
+// Save / Update User Profile Picture (DP)
+app.post('/api/users/profile/picture', async (req, res) => {
+    try {
+        const userId = actingUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: 'Authentication required.' });
+        }
+        const { image, avatar_url } = req.body;
+        let finalUrl = null;
+
+        if (image && typeof image === 'string' && image.startsWith('data:image/')) {
+            const matches = image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+            if (!matches) {
+                return res.status(400).json({ error: 'Invalid image format. Please upload a valid image file.' });
+            }
+            let ext = matches[1].toLowerCase();
+            if (ext === 'jpeg') ext = 'jpg';
+            if (!['jpg', 'png', 'webp', 'gif'].includes(ext)) {
+                return res.status(400).json({ error: 'Unsupported image format. Allowed: JPG, PNG, WEBP, GIF.' });
+            }
+            const buffer = Buffer.from(matches[2], 'base64');
+            if (buffer.length > 5 * 1024 * 1024) {
+                return res.status(400).json({ error: 'Profile picture must not exceed 5 MB.' });
+            }
+            const filename = `avatar_${userId}_${Date.now()}.${ext}`;
+            const uploadDir = path.join(__dirname, 'uploads', 'avatars');
+            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+            fs.writeFileSync(path.join(uploadDir, filename), buffer);
+            finalUrl = `/uploads/avatars/${filename}`;
+        } else if (avatar_url && typeof avatar_url === 'string' && /^https?:\/\//i.test(avatar_url.trim())) {
+            finalUrl = avatar_url.trim();
+        } else {
+            return res.status(400).json({ error: 'Please provide a valid image file or URL.' });
+        }
+
+        const updateRes = await pool.query(`
+            UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2
+            RETURNING id, name, email, avatar_initials, avatar_url, upi_id, phone, default_currency
+        `, [finalUrl, userId]);
+
+        if (updateRes.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        // Keep profiles table in sync
+        await pool.query('UPDATE profiles SET avatar_url = $1, updated_at = NOW() WHERE email = $2', [finalUrl, updateRes.rows[0].email]).catch(() => {});
+
+        res.json({
+            success: true,
+            avatar_url: finalUrl,
+            user: updateRes.rows[0],
+            message: 'Profile picture saved successfully.'
+        });
+    } catch (err) {
+        console.error('Error saving profile picture:', err);
+        res.status(500).json({ error: formatUserError(err, 'Failed to save profile picture.') });
     }
 });
 
@@ -1926,26 +2008,31 @@ app.get('/api/friends/search', async (req, res) => {
 // Send a Friend Request
 app.post('/api/friends/request', async (req, res) => {
     try {
-        const { targetUserCodeOrEmail } = req.body;
+        const { targetUserCodeOrEmail, targetUserId } = req.body;
         const sender = actingUserId(req);
         if (!sender) {
             return res.status(401).json({ error: 'Authentication required to send friend requests.' });
         }
-        if (!targetUserCodeOrEmail || !targetUserCodeOrEmail.trim()) {
-            return res.status(400).json({ error: 'Please enter a valid User Code or Email address.' });
+        if (!targetUserId && (!targetUserCodeOrEmail || !targetUserCodeOrEmail.trim())) {
+            return res.status(400).json({ error: 'Please specify a target user to send a friend request.' });
         }
 
-        const identifier = targetUserCodeOrEmail.trim().toLowerCase();
-
-        const receiverRes = await pool.query(
-            'SELECT id, name, email FROM users WHERE LOWER(email) = $1 OR LOWER(user_code) = $1',
-            [identifier]
-        );
-        if (receiverRes.rows.length === 0) {
-            return res.status(404).json({ error: `No user found matching '${targetUserCodeOrEmail}'. Check user code or email.` });
+        let receiver = null;
+        if (targetUserId && !isNaN(parseInt(targetUserId))) {
+            const rRes = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [parseInt(targetUserId)]);
+            if (rRes.rows.length > 0) receiver = rRes.rows[0];
+        } else if (targetUserCodeOrEmail && targetUserCodeOrEmail.trim()) {
+            const identifier = targetUserCodeOrEmail.trim().toLowerCase();
+            const receiverRes = await pool.query(
+                'SELECT id, name, email FROM users WHERE LOWER(email) = $1 OR LOWER(user_code) = $1',
+                [identifier]
+            );
+            if (receiverRes.rows.length > 0) receiver = receiverRes.rows[0];
         }
 
-        const receiver = receiverRes.rows[0];
+        if (!receiver) {
+            return res.status(404).json({ error: `User not found. Please verify the user details and try again.` });
+        }
         if (receiver.id === sender) {
             return res.status(400).json({ error: 'You cannot send a friend request to yourself.' });
         }
@@ -3148,6 +3235,250 @@ app.post('/api/groups/:id/invite', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: formatUserError(err, 'Failed to send group invitation.') });
+    }
+});
+
+// Upload / Update Group Cover Photo and Icon
+app.post('/api/groups/:id/media', async (req, res) => {
+    try {
+        const groupId = parseInt(req.params.id);
+        const role = await requireGroupRole(req, res, groupId);
+        if (!role) return;
+        if (role !== 'admin' && role !== 'editor') {
+            return res.status(403).json({ error: 'Permission denied: Only group Admins or Editors can update group images.' });
+        }
+
+        const { cover_image, icon_image, cover_photo_url, icon_url } = req.body;
+        let finalCover = null;
+        let finalIcon = null;
+
+        const uploadDir = path.join(__dirname, 'uploads', 'groups');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+        // Handle cover photo
+        if (cover_image && typeof cover_image === 'string' && cover_image.startsWith('data:image/')) {
+            const matches = cover_image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+            if (matches) {
+                let ext = matches[1].toLowerCase();
+                if (ext === 'jpeg') ext = 'jpg';
+                if (['jpg', 'png', 'webp'].includes(ext)) {
+                    const buf = Buffer.from(matches[2], 'base64');
+                    if (buf.length <= 5 * 1024 * 1024) {
+                        const filename = `group_cover_${groupId}_${Date.now()}.${ext}`;
+                        fs.writeFileSync(path.join(uploadDir, filename), buf);
+                        finalCover = `/uploads/groups/${filename}`;
+                    }
+                }
+            }
+        } else if (cover_photo_url && typeof cover_photo_url === 'string') {
+            finalCover = cover_photo_url.trim();
+        }
+
+        // Handle group icon
+        if (icon_image && typeof icon_image === 'string' && icon_image.startsWith('data:image/')) {
+            const matches = icon_image.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+            if (matches) {
+                let ext = matches[1].toLowerCase();
+                if (ext === 'jpeg') ext = 'jpg';
+                if (['jpg', 'png', 'webp', 'gif'].includes(ext)) {
+                    const buf = Buffer.from(matches[2], 'base64');
+                    if (buf.length <= 5 * 1024 * 1024) {
+                        const filename = `group_icon_${groupId}_${Date.now()}.${ext}`;
+                        fs.writeFileSync(path.join(uploadDir, filename), buf);
+                        finalIcon = `/uploads/groups/${filename}`;
+                    }
+                }
+            }
+        } else if (icon_url && typeof icon_url === 'string') {
+            finalIcon = icon_url.trim();
+        }
+
+        let query = 'UPDATE groups SET updated_at = NOW()';
+        const params = [];
+        let pIdx = 1;
+        if (finalCover !== null) {
+            query += `, cover_photo_url = $${pIdx++}`;
+            params.push(finalCover);
+        }
+        if (finalIcon !== null) {
+            query += `, icon_url = $${pIdx++}`;
+            params.push(finalIcon);
+        }
+        query += ` WHERE id = $${pIdx} RETURNING id, name, cover_photo_url, icon_url`;
+        params.push(groupId);
+
+        const updateRes = await pool.query(query, params);
+        res.json({
+            success: true,
+            group: updateRes.rows[0],
+            message: 'Group appearance updated successfully.'
+        });
+    } catch (err) {
+        console.error('Error updating group media:', err);
+        res.status(500).json({ error: formatUserError(err, 'Failed to update group media.') });
+    }
+});
+
+// Get / Generate WhatsApp & Shareable Group Invite Link
+app.get('/api/groups/:id/invite-link', async (req, res) => {
+    try {
+        const groupId = parseInt(req.params.id);
+        const role = await requireGroupRole(req, res, groupId);
+        if (!role) return;
+
+        let groupRes = await pool.query('SELECT id, name, invite_code, is_locked, is_archived FROM groups WHERE id = $1', [groupId]);
+        if (groupRes.rows.length === 0) return res.status(404).json({ error: 'Group not found.' });
+
+        let group = groupRes.rows[0];
+        if (!group.invite_code) {
+            const newCode = crypto.randomBytes(6).toString('hex');
+            await pool.query('UPDATE groups SET invite_code = $1 WHERE id = $2', [newCode, groupId]);
+            group.invite_code = newCode;
+        }
+
+        const host = req.get('host') || 'localhost:5000';
+        const protocol = req.protocol || 'http';
+        const baseUrl = `${protocol}://${host}`;
+        const inviteUrl = `${baseUrl}/#join/${group.invite_code}`;
+        const whatsappText = `Join my SplitWise circle "${group.name}": ${inviteUrl}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
+
+        res.json({
+            group_id: group.id,
+            group_name: group.name,
+            invite_code: group.invite_code,
+            invite_url: inviteUrl,
+            whatsapp_url: whatsappUrl
+        });
+    } catch (err) {
+        res.status(500).json({ error: formatUserError(err, 'Failed to generate invite link.') });
+    }
+});
+
+// Regenerate Group Invite Link (Admins Only)
+app.post('/api/groups/:id/regenerate-invite-link', async (req, res) => {
+    try {
+        const groupId = parseInt(req.params.id);
+        const role = await requireGroupRole(req, res, groupId);
+        if (!role) return;
+        if (role !== 'admin') {
+            return res.status(403).json({ error: 'Only circle Administrators can regenerate invitation links.' });
+        }
+
+        const newCode = crypto.randomBytes(6).toString('hex');
+        await pool.query('UPDATE groups SET invite_code = $1, updated_at = NOW() WHERE id = $2', [newCode, groupId]);
+
+        const groupRes = await pool.query('SELECT name FROM groups WHERE id = $1', [groupId]);
+        const groupName = groupRes.rows[0]?.name || 'Circle';
+        const host = req.get('host') || 'localhost:5000';
+        const protocol = req.protocol || 'http';
+        const baseUrl = `${protocol}://${host}`;
+        const inviteUrl = `${baseUrl}/#join/${newCode}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent('Join my SplitWise circle "' + groupName + '": ' + inviteUrl)}`;
+
+        res.json({
+            success: true,
+            invite_code: newCode,
+            invite_url: inviteUrl,
+            whatsapp_url: whatsappUrl,
+            message: 'Invitation link regenerated successfully.'
+        });
+    } catch (err) {
+        res.status(500).json({ error: formatUserError(err, 'Failed to regenerate invite link.') });
+    }
+});
+
+// Public Group Invite Info Preview (No financial leakage)
+app.get('/api/groups/join-info/:inviteCode', async (req, res) => {
+    try {
+        const { inviteCode } = req.params;
+        if (!inviteCode || !inviteCode.trim()) {
+            return res.status(400).json({ error: 'Invalid invite code.' });
+        }
+        const groupRes = await pool.query(`
+            SELECT g.id, g.name, g.description, g.category, g.avatar_color, g.cover_photo_url, g.icon_url, g.is_locked, g.is_archived,
+                   (SELECT COUNT(*)::int FROM group_members WHERE group_id = g.id) AS member_count,
+                   u.name AS creator_name
+            FROM groups g
+            LEFT JOIN users u ON g.created_by = u.id
+            WHERE g.invite_code = $1
+        `, [inviteCode.trim()]);
+
+        if (groupRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Invitation link is invalid or has expired.' });
+        }
+        const g = groupRes.rows[0];
+        if (g.is_archived || g.is_locked) {
+            return res.status(403).json({ error: 'This circle is currently locked or archived and cannot accept new members.' });
+        }
+
+        const groupPayload = {
+            id: g.id,
+            name: g.name,
+            description: g.description,
+            category: g.category,
+            avatar_color: g.avatar_color,
+            cover_photo_url: g.cover_photo_url,
+            icon_url: g.icon_url,
+            member_count: g.member_count,
+            creator_name: g.creator_name
+        };
+
+        res.json({
+            group: groupPayload,
+            ...groupPayload
+        });
+    } catch (err) {
+        res.status(500).json({ error: formatUserError(err, 'Failed to fetch invitation details.') });
+    }
+});
+
+// Join Group via Invite Link
+app.post('/api/groups/join/:inviteCode', async (req, res) => {
+    try {
+        const userId = actingUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: 'Authentication required. Please sign in to join this circle.' });
+        }
+        const { inviteCode } = req.params;
+        const groupRes = await pool.query('SELECT * FROM groups WHERE invite_code = $1', [inviteCode.trim()]);
+        if (groupRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or expired invitation link.' });
+        }
+        const group = groupRes.rows[0];
+        if (group.is_locked || group.is_archived) {
+            return res.status(403).json({ error: 'This circle is currently locked or archived and cannot accept new members.' });
+        }
+
+        // Check if already a member
+        const memRes = await pool.query('SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2', [group.id, userId]);
+        if (memRes.rows.length > 0) {
+            return res.json({
+                already_member: true,
+                group_id: group.id,
+                group_name: group.name,
+                message: `You are already a member of "${group.name}".`
+            });
+        }
+
+        // Enroll member
+        await pool.query('INSERT INTO group_members (group_id, user_id, role) VALUES ($1, $2, $3)', [group.id, userId, 'member']);
+
+        // Sync with chat conversation if exists
+        const convRes = await pool.query('SELECT id FROM chat_conversations WHERE group_id = $1 LIMIT 1', [group.id]);
+        if (convRes.rows.length > 0) {
+            await pool.query('INSERT INTO chat_conversation_members (conversation_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [convRes.rows[0].id, userId]);
+        }
+
+        res.status(201).json({
+            success: true,
+            group_id: group.id,
+            group_name: group.name,
+            message: `Welcome to "${group.name}"! You have successfully joined the circle.`
+        });
+    } catch (err) {
+        console.error('Error joining group:', err);
+        res.status(500).json({ error: formatUserError(err, 'Failed to join circle.') });
     }
 });
 
@@ -5603,7 +5934,22 @@ app.post('/api/upi/create-payment-request', async (req, res) => {
 
         const payer = pRes.rows[0];
         const receiver = rRes.rows[0];
-        const receiverUpi = receiver.upi_id || `${receiver.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@okaxis`;
+
+        if (!receiver.upi_id || !receiver.upi_id.trim()) {
+            return res.status(400).json({
+                error: `${receiver.name} has not configured a UPI ID yet. They must add their UPI ID in Profile Settings before UPI QR payments can be generated.`,
+                code: 'MISSING_RECEIVER_UPI'
+            });
+        }
+        const cleanReceiverUpi = receiver.upi_id.trim();
+        const upiPattern = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+        if (!upiPattern.test(cleanReceiverUpi)) {
+            return res.status(400).json({
+                error: `${receiver.name}'s UPI ID (${cleanReceiverUpi}) is invalid. Please ask them to update it in Profile Settings.`,
+                code: 'INVALID_RECEIVER_UPI'
+            });
+        }
+        const receiverUpi = cleanReceiverUpi;
 
         // Reuse an identical open request instead of creating duplicates when the
         // user regenerates or reloads the page.
@@ -5622,6 +5968,8 @@ app.post('/api/upi/create-payment-request', async (req, res) => {
                 reused: true,
                 request_id: pr.request_id,
                 payment_uri: pr.upi_string,
+                upi_string: pr.upi_string,
+                upiString: pr.upi_string,
                 payment_request: {
                     request_id: pr.request_id,
                     payer_id: pId,
@@ -5658,6 +6006,8 @@ app.post('/api/upi/create-payment-request', async (req, res) => {
             success: true,
             request_id: pr.request_id,
             payment_uri: pr.upi_string,
+            upi_string: pr.upi_string,
+            upiString: pr.upi_string,
             payment_request: {
                 request_id: pr.request_id,
                 payer_id: pId,
@@ -6268,9 +6618,199 @@ app.get('/api/balances/summary', async (req, res) => {
     }
 });
 
-// ==========================================
-// 6. ANALYTICS & DEBT SIMPLIFICATION
-// ==========================================
+// Spending Velocity — Accurate Group-Wise & Member-Wise Analysis
+app.get('/api/analytics/spending-velocity', async (req, res) => {
+    try {
+        const currentUserId = actingUserId(req);
+        if (!currentUserId) {
+            return res.status(401).json({ error: 'Authentication required.' });
+        }
+
+        const groupIdParam = req.query.groupId || req.query.group_id;
+        const requestedGroupId = groupIdParam && !isNaN(parseInt(groupIdParam)) ? parseInt(groupIdParam) : null;
+
+        // If specific group is requested, verify user belongs to it
+        if (requestedGroupId) {
+            const memCheck = await pool.query('SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2', [requestedGroupId, currentUserId]);
+            if (memCheck.rows.length === 0) {
+                return res.status(403).json({ error: 'Permission denied: You are not a member of this circle.' });
+            }
+        }
+
+        // Get list of group IDs accessible to user
+        let allowedGroupIds = [];
+        if (requestedGroupId) {
+            allowedGroupIds = [requestedGroupId];
+        } else {
+            const userGroups = await pool.query('SELECT group_id FROM group_members WHERE user_id = $1', [currentUserId]);
+            allowedGroupIds = userGroups.rows.map(r => r.group_id);
+        }
+
+        if (allowedGroupIds.length === 0) {
+            return res.json({
+                group_id: requestedGroupId,
+                months: [],
+                labels: [],
+                datasets: [],
+                members: [],
+                total_spend: 0
+            });
+        }
+
+        // 1. Group members list
+        let membersRes;
+        if (requestedGroupId) {
+            membersRes = await pool.query(`
+                SELECT u.id, u.name, u.avatar_initials, u.avatar_url, gm.role
+                FROM group_members gm
+                JOIN users u ON gm.user_id = u.id
+                WHERE gm.group_id = $1
+                ORDER BY u.name ASC
+            `, [requestedGroupId]);
+        } else {
+            membersRes = await pool.query(`
+                SELECT DISTINCT u.id, u.name, u.avatar_initials, u.avatar_url
+                FROM group_members gm
+                JOIN users u ON gm.user_id = u.id
+                WHERE gm.group_id = ANY($1::int[])
+                ORDER BY u.name ASC
+            `, [allowedGroupIds]);
+        }
+        const members = membersRes.rows;
+
+        // 2. Query monthly timeline for past 6 months
+        const monthlyTimelineRes = await pool.query(`
+            SELECT 
+                TO_CHAR(date_trunc('month', e.expense_date), 'Mon YYYY') AS month_label,
+                date_trunc('month', e.expense_date)::date AS month_start,
+                EXTRACT(YEAR FROM e.expense_date) AS yr,
+                EXTRACT(MONTH FROM e.expense_date) AS mo,
+                SUM(COALESCE(e.converted_amount, e.amount)) AS total_group_spend
+            FROM expenses e
+            WHERE e.group_id = ANY($1::int[])
+              AND e.expense_date >= CURRENT_DATE - INTERVAL '6 months'
+            GROUP BY month_start, yr, mo, month_label
+            ORDER BY month_start ASC
+        `, [allowedGroupIds]);
+
+        let timeline = monthlyTimelineRes.rows;
+        if (timeline.length === 0) {
+            const dummyMonthsRes = await pool.query(`
+                SELECT TO_CHAR(m, 'Mon YYYY') AS month_label, m::date AS month_start, 0::numeric AS total_group_spend
+                FROM generate_series(
+                    date_trunc('month', CURRENT_DATE - INTERVAL '5 months'),
+                    date_trunc('month', CURRENT_DATE),
+                    '1 month'::interval
+                ) m
+                ORDER BY m ASC
+            `);
+            timeline = dummyMonthsRes.rows;
+        }
+
+        const labels = timeline.map(t => t.month_label);
+
+        // 3. Member-wise shares across those exact months
+        const memberSpendRes = await pool.query(`
+            SELECT 
+                TO_CHAR(date_trunc('month', e.expense_date), 'Mon YYYY') AS month_label,
+                date_trunc('month', e.expense_date)::date AS month_start,
+                es.user_id,
+                u.name AS user_name,
+                SUM(COALESCE(es.base_amount, es.amount)) AS member_share
+            FROM expense_splits es
+            JOIN expenses e ON es.expense_id = e.id
+            JOIN users u ON es.user_id = u.id
+            WHERE e.group_id = ANY($1::int[])
+              AND e.expense_date >= CURRENT_DATE - INTERVAL '6 months'
+            GROUP BY month_start, month_label, es.user_id, u.name
+            ORDER BY month_start ASC
+        `, [allowedGroupIds]);
+
+        const groupData = timeline.map(t => parseFloat(t.total_group_spend || 0));
+
+        const palette = ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316'];
+        const memberMap = new Map();
+        memberSpendRes.rows.forEach(r => {
+            if (!memberMap.has(r.user_id)) {
+                memberMap.set(r.user_id, {
+                    user_id: r.user_id,
+                    user_name: r.user_name,
+                    monthly: new Map()
+                });
+            }
+            memberMap.get(r.user_id).monthly.set(r.month_label, parseFloat(r.member_share || 0));
+        });
+
+        const datasets = [];
+        // Add current user first
+        const userObj = memberMap.get(currentUserId);
+        datasets.push({
+            label: 'Your Share',
+            user_id: currentUserId,
+            data: labels.map(l => (userObj?.monthly.get(l) || 0)),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            borderWidth: 2,
+            tension: 0.35,
+            fill: true
+        });
+
+        // Add other members
+        let colorIdx = 1;
+        members.forEach(m => {
+            if (m.id === currentUserId) return;
+            const mObj = memberMap.get(m.id);
+            const color = palette[colorIdx % palette.length];
+            colorIdx++;
+            datasets.push({
+                label: m.name,
+                user_id: m.id,
+                data: labels.map(l => (mObj?.monthly.get(l) || 0)),
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                tension: 0.35,
+                fill: false
+            });
+        });
+
+        // Add Circle Total velocity
+        datasets.push({
+            label: requestedGroupId ? 'Circle Total' : 'All Circles Total',
+            is_total: true,
+            data: groupData,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.08)',
+            borderWidth: 2.5,
+            borderDash: [5, 5],
+            tension: 0.35,
+            fill: false
+        });
+
+        const totalSpend = groupData.reduce((acc, v) => acc + v, 0);
+
+        res.json({
+            group_id: requestedGroupId,
+            labels,
+            datasets,
+            members: members.map(m => {
+                const totalMemberSpend = labels.reduce((acc, l) => acc + (memberMap.get(m.id)?.monthly.get(l) || 0), 0);
+                return {
+                    id: m.id,
+                    name: m.name,
+                    avatar_initials: m.avatar_initials,
+                    avatar_url: m.avatar_url,
+                    total_spend: totalMemberSpend,
+                    share_percentage: totalSpend > 0 ? ((totalMemberSpend / totalSpend) * 100).toFixed(1) : '0.0'
+                };
+            }),
+            total_spend: totalSpend
+        });
+    } catch (err) {
+        console.error('Error fetching spending velocity:', err);
+        res.status(500).json({ error: formatUserError(err, 'Failed to fetch spending velocity.') });
+    }
+});
 
 app.get('/api/analytics', async (req, res) => {
     try {
@@ -7411,7 +7951,7 @@ app.get('/api/chat/conversations/:id/messages', async (req, res) => {
             return res.status(403).json({ error: 'Access denied: You are not a member of this conversation.' });
         }
 
-        // Fetch messages
+        // Fetch messages with rich media and receipt timestamps
         const messagesRes = await pool.query(`
             SELECT 
                 m.id, 
@@ -7419,19 +7959,26 @@ app.get('/api/chat/conversations/:id/messages', async (req, res) => {
                 m.sender_id, 
                 u.name AS sender_name, 
                 u.avatar_initials, 
+                u.avatar_url,
                 m.message, 
+                COALESCE(m.message_type, 'text') AS message_type,
+                m.media_url,
+                m.file_name,
+                m.file_size,
                 m.is_read, 
-                m.created_at
+                m.created_at,
+                COALESCE(m.delivered_at, m.created_at) AS delivered_at,
+                m.read_at
             FROM chat_messages m
             JOIN users u ON u.id = m.sender_id
             WHERE m.conversation_id = $1
             ORDER BY m.created_at ASC
         `, [convId]);
 
-        // Mark unread messages from other users as read
+        // Mark unread messages from other users as read with read receipt timestamp
         await pool.query(`
             UPDATE chat_messages 
-            SET is_read = TRUE 
+            SET is_read = TRUE, read_at = COALESCE(read_at, NOW())
             WHERE conversation_id = $1 AND sender_id != $2 AND is_read = FALSE
         `, [convId, user.id]);
 
@@ -7442,20 +7989,108 @@ app.get('/api/chat/conversations/:id/messages', async (req, res) => {
     }
 });
 
-// 4. Send message to conversation
+// Mark Conversation Messages As Read
+app.post('/api/chat/conversations/:id/read', async (req, res) => {
+    try {
+        const user = await getAuthUser(req, res);
+        if (!user) return;
+
+        const convId = parseInt(req.params.id);
+        if (!convId || isNaN(convId)) {
+            return res.status(400).json({ error: 'Invalid conversation ID.' });
+        }
+
+        await pool.query(`
+            UPDATE chat_messages 
+            SET is_read = TRUE, read_at = COALESCE(read_at, NOW())
+            WHERE conversation_id = $1 AND sender_id != $2 AND is_read = FALSE
+        `, [convId, user.id]);
+
+        res.json({ success: true, message: 'Messages marked as read.' });
+    } catch (err) {
+        console.error('Error marking messages as read:', err);
+        res.status(500).json({ error: formatUserError(err, 'Failed to mark messages as read.') });
+    }
+});
+
+// Upload Attachment (Document / Image / Media) for Chat
+app.post('/api/chat/conversations/:id/attachment', async (req, res) => {
+    try {
+        const user = await getAuthUser(req, res);
+        if (!user) return;
+
+        const convId = parseInt(req.params.id);
+        if (!convId || isNaN(convId)) {
+            return res.status(400).json({ error: 'Invalid conversation ID.' });
+        }
+
+        // Verify membership
+        const memberCheck = await pool.query(`
+            SELECT 1 FROM chat_conversation_members 
+            WHERE conversation_id = $1 AND user_id = $2
+        `, [convId, user.id]);
+        if (memberCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Access denied: You cannot upload files to this conversation.' });
+        }
+
+        const { file_data, file_name, file_type } = req.body;
+        if (!file_data || typeof file_data !== 'string' || !file_name) {
+            return res.status(400).json({ error: 'Valid file data and file name are required.' });
+        }
+
+        const matches = file_data.match(/^data:([a-zA-Z0-9_\-+/.]+);base64,(.+)$/);
+        if (!matches) {
+            return res.status(400).json({ error: 'Invalid file encoding.' });
+        }
+
+        const mime = matches[1].toLowerCase();
+        const buffer = Buffer.from(matches[2], 'base64');
+        const sizeBytes = buffer.length;
+
+        // Max 10MB
+        if (sizeBytes > 10 * 1024 * 1024) {
+            return res.status(400).json({ error: 'File size cannot exceed 10 MB.' });
+        }
+
+        // Sanitize file extension
+        const cleanExt = path.extname(file_name).replace(/[^a-zA-Z0-9.]/g, '').toLowerCase() || '.bin';
+        const safeBase = path.basename(file_name, cleanExt).replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 50);
+        const storedFilename = `chat_${convId}_${Date.now()}_${safeBase}${cleanExt}`;
+
+        const uploadDir = path.join(__dirname, 'uploads', 'chat');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        fs.writeFileSync(path.join(uploadDir, storedFilename), buffer);
+
+        const mediaUrl = `/uploads/chat/${storedFilename}`;
+        const isImg = mime.startsWith('image/');
+        const messageType = isImg ? 'image' : 'document';
+
+        res.json({
+            media_url: mediaUrl,
+            file_name: file_name.substring(0, 100),
+            file_size: sizeBytes,
+            message_type: messageType
+        });
+    } catch (err) {
+        console.error('Error uploading chat attachment:', err);
+        res.status(500).json({ error: formatUserError(err, 'Failed to upload attachment.') });
+    }
+});
+
+// 4. Send message to conversation (Supports text, emoji, gif, sticker, document)
 app.post('/api/chat/conversations/:id/messages', async (req, res) => {
     try {
         const user = await getAuthUser(req, res);
         if (!user) return;
 
         const convId = parseInt(req.params.id);
-        const { message } = req.body;
+        const { message, message_type = 'text', media_url = null, file_name = null, file_size = null } = req.body;
 
         if (!convId || isNaN(convId)) {
             return res.status(400).json({ error: 'Invalid conversation ID.' });
         }
-        if (!message || !message.trim()) {
-            return res.status(400).json({ error: 'Message content cannot be empty.' });
+        if ((!message || !message.trim()) && !media_url) {
+            return res.status(400).json({ error: 'Message content or media attachment cannot be empty.' });
         }
 
         // Verify membership
@@ -7468,13 +8103,15 @@ app.post('/api/chat/conversations/:id/messages', async (req, res) => {
             return res.status(403).json({ error: 'Access denied: You cannot send messages to conversations you do not belong to.' });
         }
 
-        const cleanMessage = message.trim().substring(0, 2000);
+        const cleanMessage = (message || file_name || `[${message_type.toUpperCase()}]`).trim().substring(0, 2000);
+        const validTypes = ['text', 'emoji', 'gif', 'sticker', 'document', 'image'];
+        const cleanType = validTypes.includes(message_type) ? message_type : 'text';
 
         const insertRes = await pool.query(`
-            INSERT INTO chat_messages (conversation_id, sender_id, message)
-            VALUES ($1, $2, $3)
-            RETURNING id, conversation_id, sender_id, message, is_read, created_at
-        `, [convId, user.id, cleanMessage]);
+            INSERT INTO chat_messages (conversation_id, sender_id, message, message_type, media_url, file_name, file_size, delivered_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            RETURNING id, conversation_id, sender_id, message, message_type, media_url, file_name, file_size, is_read, created_at, delivered_at, read_at
+        `, [convId, user.id, cleanMessage, cleanType, media_url, file_name, file_size ? parseInt(file_size) : null]);
 
         // Update conversation updated_at
         await pool.query('UPDATE chat_conversations SET updated_at = NOW() WHERE id = $1', [convId]);
@@ -7484,7 +8121,8 @@ app.post('/api/chat/conversations/:id/messages', async (req, res) => {
             message: {
                 ...msgRow,
                 sender_name: user.name,
-                avatar_initials: user.avatar_initials || 'US'
+                avatar_initials: user.avatar_initials || 'US',
+                avatar_url: user.avatar_url || null
             }
         });
     } catch (err) {

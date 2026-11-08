@@ -80,7 +80,7 @@ async function resolveSession(token) {
 
     const res = await pool.query(`
         SELECT s.id AS session_id, s.user_id, s.expires_at, s.last_used_at,
-               u.id, u.name, u.email, u.username, u.role, u.is_active, u.avatar_initials,
+               u.id, u.name, u.email, u.username, u.role, u.is_active, u.avatar_initials, u.avatar_url,
                u.upi_id, u.phone, u.default_currency, u.user_code, u.auth_id
         FROM user_sessions s
         JOIN users u ON u.id = s.user_id
@@ -107,6 +107,7 @@ async function resolveSession(token) {
         username: row.username,
         role: row.role || 'user',
         avatar_initials: row.avatar_initials,
+        avatar_url: row.avatar_url || null,
         upi_id: row.upi_id,
         phone: row.phone,
         default_currency: row.default_currency || 'INR',
