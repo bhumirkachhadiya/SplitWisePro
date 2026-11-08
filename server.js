@@ -252,71 +252,332 @@ function sanitizeText(value, maxLength = 500) {
 }
 
 /**
- * Apply a payment to the debtor's outstanding splits (oldest first).
- * Supports partial payments and never over-settles a split.
- * Must be called inside a transaction when the caller needs atomicity.
+ * Calculates per-pair liabilities for an expense.
+ * Correctly accounts for single-payer, multi-payer, partial settlements, and non-participant payers.
  */
-async function applyPaymentToSplits(db, { payerId, receiverId, amount, groupId = null, expenseId = null }) {
-    const params = [payerId, receiverId];
-    let filters = '';
-    if (groupId) {
-        params.push(groupId);
-        filters += ` AND e.group_id = $${params.length}`;
+async function getExpenseOutstandingLiabilities(db, expenseId) {
+    const expRes = await db.query(`
+        SELECT e.id, e.group_id, e.amount, e.currency, e.description, e.expense_date, e.paid_by,
+               g.name AS group_name
+        FROM expenses e
+        LEFT JOIN groups g ON g.id = e.group_id
+        WHERE e.id = $1
+    `, [expenseId]);
+    if (expRes.rows.length === 0) return null;
+    const exp = expRes.rows[0];
+
+    const payersRes = await db.query(`
+        SELECT ep.user_id, ep.amount, u.name, u.avatar_initials, u.upi_id
+        FROM expense_payers ep
+        JOIN users u ON u.id = ep.user_id
+        WHERE ep.expense_id = $1
+    `, [expenseId]);
+
+    const splitsRes = await db.query(`
+        SELECT es.id, es.user_id, es.amount, es.base_amount, es.settled_amount, es.settled_amount_base,
+               u.name, u.avatar_initials, u.upi_id
+        FROM expense_splits es
+        JOIN users u ON u.id = es.user_id
+        WHERE es.expense_id = $1
+    `, [expenseId]);
+
+    const allocRes = await db.query(`
+        SELECT sa.debtor_id, sa.creditor_id, SUM(sa.amount) AS total_settled
+        FROM settlement_allocations sa
+        WHERE sa.expense_id = $1
+        GROUP BY sa.debtor_id, sa.creditor_id
+    `, [expenseId]);
+
+    const settledMap = {};
+    allocRes.rows.forEach(r => {
+        const key = `${r.debtor_id}->${r.creditor_id}`;
+        settledMap[key] = roundMoney(parseFloat(r.total_settled || 0));
+    });
+
+    const netMap = {};
+    const userMeta = {};
+
+    if (payersRes.rows.length > 0) {
+        payersRes.rows.forEach(p => {
+            const uid = p.user_id;
+            userMeta[uid] = { name: p.name, initials: p.avatar_initials, upi: p.upi_id };
+            netMap[uid] = roundMoney((netMap[uid] || 0) + parseFloat(p.amount || 0));
+        });
+    } else if (exp.paid_by) {
+        // Fallback for legacy single-payer rows where expense_payers was not populated
+        const pUserRes = await db.query('SELECT id, name, avatar_initials, upi_id FROM users WHERE id = $1', [exp.paid_by]);
+        const pu = pUserRes.rows[0];
+        if (pu) {
+            userMeta[pu.id] = { name: pu.name, initials: pu.avatar_initials, upi: pu.upi_id };
+            netMap[pu.id] = roundMoney(parseFloat(exp.amount || 0));
+        }
     }
+
+    splitsRes.rows.forEach(s => {
+        const uid = s.user_id;
+        if (!userMeta[uid]) {
+            userMeta[uid] = { name: s.name, initials: s.avatar_initials, upi: s.upi_id };
+        }
+        netMap[uid] = roundMoney((netMap[uid] || 0) - parseFloat(s.base_amount || 0));
+    });
+
+    const creditors = [];
+    const debtors = [];
+    let totalSurplus = 0;
+    let totalDeficit = 0;
+
+    Object.keys(netMap).forEach(uidStr => {
+        const uid = parseInt(uidStr);
+        const val = netMap[uid];
+        if (val > 0.005) {
+            creditors.push({ user_id: uid, surplus: val, meta: userMeta[uid] });
+            totalSurplus = roundMoney(totalSurplus + val);
+        } else if (val < -0.005) {
+            debtors.push({ user_id: uid, deficit: -val, meta: userMeta[uid] });
+            totalDeficit = roundMoney(totalDeficit - val);
+        }
+    });
+
+    const liabilities = [];
+    if (totalSurplus <= 0.005 || totalDeficit <= 0.005) {
+        return { expense: exp, liabilities };
+    }
+
+    debtors.forEach(d => {
+        creditors.forEach(c => {
+            const prop = totalSurplus > 0 ? (c.surplus / totalSurplus) : 0;
+            const gross = roundMoney(d.deficit * prop);
+            const key = `${d.user_id}->${c.user_id}`;
+            let settled = settledMap[key] || 0;
+
+            // Legacy backward-compatibility check:
+            // If no settlement_allocations existed, check debtor's split settled_amount_base if creditor was primary payer
+            if (settled <= 0.005 && allocRes.rows.length === 0) {
+                const sp = splitsRes.rows.find(x => x.user_id === d.user_id);
+                if (sp && Number(exp.paid_by) === Number(c.user_id)) {
+                    settled = roundMoney(parseFloat(sp.settled_amount_base || 0));
+                }
+            }
+
+            const outstanding = roundMoney(Math.max(0, gross - settled));
+            liabilities.push({
+                expense_id: exp.id,
+                description: exp.description,
+                expense_date: exp.expense_date,
+                group_id: exp.group_id,
+                group_name: exp.group_name,
+                currency: exp.currency || 'INR',
+                total_amount: parseFloat(exp.amount),
+                debtor_id: d.user_id,
+                debtor_name: d.meta?.name || 'Debtor',
+                debtor_initials: d.meta?.initials || 'D',
+                creditor_id: c.user_id,
+                creditor_name: c.meta?.name || 'Creditor',
+                creditor_initials: c.meta?.initials || 'C',
+                creditor_upi: c.meta?.upi || '',
+                gross_liability: gross,
+                already_settled: settled,
+                outstanding_amount: outstanding
+            });
+        });
+    });
+
+    return { expense: exp, liabilities };
+}
+
+/**
+ * Returns all outstanding expenses matching optional filters (debtor, creditor, group, expense).
+ * Always returns chronological (oldest-first) list with exact liabilities and balances.
+ */
+async function getOutstandingExpenses(db, { debtorId = null, creditorId = null, groupId = null, expenseId = null }) {
+    let params = [];
+    let whereClauses = [];
+
     if (expenseId) {
         params.push(expenseId);
-        filters += ` AND e.id = $${params.length}`;
+        whereClauses.push(`e.id = $${params.length}`);
+    }
+    if (groupId) {
+        params.push(groupId);
+        whereClauses.push(`e.group_id = $${params.length}`);
+    }
+    if (debtorId) {
+        params.push(debtorId);
+        whereClauses.push(`EXISTS (SELECT 1 FROM expense_splits es WHERE es.expense_id = e.id AND es.user_id = $${params.length})`);
+    }
+    if (creditorId) {
+        params.push(creditorId);
+        whereClauses.push(`(
+            EXISTS (SELECT 1 FROM expense_payers ep WHERE ep.expense_id = e.id AND ep.user_id = $${params.length})
+            OR e.paid_by = $${params.length}
+        )`);
     }
 
-    const rowsResult = await db.query(`
-        SELECT es.id, es.amount, es.base_amount, es.settled_amount, es.settled_amount_base
-        FROM expense_splits es
-        JOIN expenses e ON e.id = es.expense_id
-        JOIN expense_payers ep ON ep.expense_id = e.id
-        WHERE es.user_id = $1
-          AND ep.user_id = $2
-          AND es.user_id <> ep.user_id
-          AND (es.base_amount - es.settled_amount_base) > 0.005
-          ${filters}
-        ORDER BY e.expense_date ASC, es.id ASC
-        FOR UPDATE OF es
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const expRows = await db.query(`
+        SELECT e.id
+        FROM expenses e
+        ${whereSql}
+        ORDER BY e.expense_date ASC, e.id ASC
     `, params);
 
-    const rows = rowsResult.rows;
+    const allOutstanding = [];
+    for (const row of expRows.rows) {
+        const res = await getExpenseOutstandingLiabilities(db, row.id);
+        if (!res) continue;
+        for (const liab of res.liabilities) {
+            if (debtorId && liab.debtor_id !== debtorId) continue;
+            if (creditorId && liab.creditor_id !== creditorId) continue;
+            if (liab.outstanding_amount > 0.005) {
+                allOutstanding.push(liab);
+            }
+        }
+    }
+    return allOutstanding;
+}
 
-    let remaining = roundMoney(amount);
-    const allocations = [];
-    for (const row of rows) {
-        if (remaining <= 0.005) break;
-        const baseAmount = roundMoney(row.base_amount);
-        const alreadySettledBase = roundMoney(row.settled_amount_base);
-        const outstandingBase = roundMoney(baseAmount - alreadySettledBase);
-        if (outstandingBase <= 0.005) continue;
-        const use = Math.min(remaining, outstandingBase);
-        const newSettledBase = roundMoney(alreadySettledBase + use);
+/**
+ * Records settlement allocations in the settlement_allocations table and updates expense_splits.
+ */
+async function recordSettlementAllocations(db, { settlementId, debtorId, creditorId, allocations }) {
+    if (!settlementId || !Array.isArray(allocations) || allocations.length === 0) return [];
+    const recorded = [];
 
-        // Keep the expense-currency mirror accurate for the UI/protection checks.
-        const ratio = baseAmount > 0 ? (roundMoney(row.amount) / baseAmount) : 1;
-        const newSettled = roundMoney(newSettledBase * ratio);
+    for (const alloc of allocations) {
+        const expId = parseInt(alloc.expense_id || alloc.id);
+        const allocAmt = roundMoney(parseFloat(alloc.amount || alloc.applied || 0));
+        if (!expId || allocAmt <= 0.005) continue;
 
-        await db.query(`
-            UPDATE expense_splits
-            SET settled_amount_base = $1,
-                settled_amount = $2,
-                is_settled = ($1 >= base_amount - 0.005),
-                settled_at = CASE WHEN $1 >= base_amount - 0.005 THEN NOW() ELSE settled_at END
-            WHERE id = $3
-        `, [newSettledBase, newSettled, row.id]);
-        allocations.push({ split_id: row.id, applied: use });
-        remaining = roundMoney(remaining - use);
+        const insRes = await db.query(`
+            INSERT INTO settlement_allocations (settlement_id, expense_id, debtor_id, creditor_id, amount)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `, [settlementId, expId, debtorId, creditorId, allocAmt]);
+        recorded.push(insRes.rows[0]);
+
+        // Keep expense_splits.settled_amount_base and settled_amount updated for backward compatibility
+        const splitRes = await db.query(`
+            SELECT id, base_amount, amount, settled_amount_base, settled_amount
+            FROM expense_splits
+            WHERE expense_id = $1 AND user_id = $2
+            FOR UPDATE
+        `, [expId, debtorId]);
+
+        if (splitRes.rows.length > 0) {
+            const sp = splitRes.rows[0];
+            const baseAmount = roundMoney(parseFloat(sp.base_amount || 0));
+            const prevSettledBase = roundMoney(parseFloat(sp.settled_amount_base || 0));
+            const newSettledBase = roundMoney(Math.min(baseAmount, prevSettledBase + allocAmt));
+            const ratio = baseAmount > 0 ? (roundMoney(parseFloat(sp.amount || 0)) / baseAmount) : 1;
+            const newSettled = roundMoney(newSettledBase * ratio);
+            const isSettled = newSettledBase >= (baseAmount - 0.005);
+
+            await db.query(`
+                UPDATE expense_splits
+                SET settled_amount_base = $1,
+                    settled_amount = $2,
+                    is_settled = $3,
+                    settled_at = CASE WHEN $3 THEN NOW() ELSE settled_at END
+                WHERE id = $4
+            `, [newSettledBase, newSettled, isSettled, sp.id]);
+        }
+    }
+
+    return recorded;
+}
+
+/**
+ * Apply a payment to the debtor's outstanding splits.
+ * Supports:
+ *   1. Custom allocations: [{ expense_id, amount }]
+ *   2. Expense-wise: expenseId
+ *   3. Combined FIFO (oldest-first) across group or all mutual debts.
+ * Supports partial payments and never over-settles.
+ */
+async function applyPaymentToSplits(db, { payerId, receiverId, amount, groupId = null, expenseId = null, settlementId = null, allocations = null }) {
+    const pId = parseInt(payerId);
+    const rId = parseInt(receiverId);
+    const numAmount = roundMoney(amount);
+
+    const outstandingList = await getOutstandingExpenses(db, {
+        debtorId: pId,
+        creditorId: rId,
+        groupId: groupId ? parseInt(groupId) : null,
+        expenseId: expenseId ? parseInt(expenseId) : null
+    });
+
+    let plannedAllocations = [];
+
+    if (Array.isArray(allocations) && allocations.length > 0) {
+        // Custom allocations specified by the user
+        let remainingTarget = numAmount;
+        for (const item of allocations) {
+            const targetExpId = parseInt(item.expense_id || item.id);
+            const allocAmt = roundMoney(parseFloat(item.amount || 0));
+            if (!targetExpId || allocAmt <= 0) continue;
+
+            const matched = outstandingList.find(x => x.expense_id === targetExpId);
+            if (!matched) continue;
+
+            const usable = Math.min(allocAmt, matched.outstanding_amount);
+            plannedAllocations.push({
+                expense_id: targetExpId,
+                amount: usable,
+                description: matched.description,
+                expense_date: matched.expense_date
+            });
+            remainingTarget = roundMoney(remainingTarget - usable);
+        }
+    } else if (expenseId) {
+        // Single expense-wise settlement
+        const targetExpId = parseInt(expenseId);
+        const matched = outstandingList.find(x => x.expense_id === targetExpId);
+        if (matched) {
+            const usable = Math.min(numAmount, matched.outstanding_amount);
+            plannedAllocations.push({
+                expense_id: targetExpId,
+                amount: usable,
+                description: matched.description,
+                expense_date: matched.expense_date
+            });
+        }
+    } else {
+        // Combined settlement (FIFO oldest-first across all outstanding expenses)
+        let rem = numAmount;
+        for (const item of outstandingList) {
+            if (rem <= 0.005) break;
+            const usable = Math.min(rem, item.outstanding_amount);
+            plannedAllocations.push({
+                expense_id: item.expense_id,
+                amount: roundMoney(usable),
+                description: item.description,
+                expense_date: item.expense_date
+            });
+            rem = roundMoney(rem - usable);
+        }
+    }
+
+    const appliedTotal = roundMoney(plannedAllocations.reduce((sum, a) => sum + a.amount, 0));
+    const unapplied = roundMoney(Math.max(0, numAmount - appliedTotal));
+
+    // If a settlementId was already provided, write the allocations immediately
+    if (settlementId && plannedAllocations.length > 0) {
+        await recordSettlementAllocations(db, {
+            settlementId,
+            debtorId: pId,
+            creditorId: rId,
+            allocations: plannedAllocations
+        });
     }
 
     return {
-        appliedTotal: roundMoney(roundMoney(amount) - remaining),
-        unapplied: remaining,
-        allocations
+        appliedTotal,
+        unapplied,
+        allocations: plannedAllocations,
+        outstandingExpenses: outstandingList
     };
 }
+
 
 // ==========================================
 // 1. AUTH & EMAIL OTP VERIFICATION SYSTEM
@@ -3987,11 +4248,13 @@ app.get('/api/settlements', async (req, res) => {
             SELECT s.*, 
                    p.name as payer_name, p.avatar_initials as payer_initials,
                    r.name as receiver_name, r.avatar_initials as receiver_initials, r.upi_id as receiver_upi,
-                   g.name as group_name
+                   g.name as group_name,
+                   e.description as expense_description, e.expense_date
             FROM settlements s
             LEFT JOIN users p ON s.payer_id = p.id
             LEFT JOIN users r ON s.receiver_id = r.id
             LEFT JOIN groups g ON s.group_id = g.id
+            LEFT JOIN expenses e ON s.expense_id = e.id
             WHERE s.payer_id = $1 
                OR s.receiver_id = $1 
                OR (s.group_id IS NOT NULL AND s.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1))
@@ -4003,7 +4266,128 @@ app.get('/api/settlements', async (req, res) => {
     }
 });
 
-// Record Settlement
+// Dual Settlement: Outstanding Expenses Query (Expense-Wise & Combined)
+app.get('/api/settlements/outstanding-expenses', async (req, res) => {
+    try {
+        const userId = actingUserId(req);
+        if (!userId) return res.status(401).json({ error: 'Authentication required.' });
+
+        const peerId = req.query.peer_id ? parseInt(req.query.peer_id) : null;
+        const groupId = req.query.group_id && req.query.group_id !== 'all' ? parseInt(req.query.group_id) : null;
+        const expenseId = req.query.expense_id ? parseInt(req.query.expense_id) : null;
+        const role = req.query.role || 'all';
+
+        let payable = [];
+        let receivable = [];
+
+        if (role === 'all' || role === 'debtor') {
+            payable = await getOutstandingExpenses(pool, {
+                debtorId: userId,
+                creditorId: peerId,
+                groupId,
+                expenseId
+            });
+        }
+        if (role === 'all' || role === 'creditor') {
+            receivable = await getOutstandingExpenses(pool, {
+                debtorId: peerId,
+                creditorId: userId,
+                groupId,
+                expenseId
+            });
+        }
+
+        const totalPayable = roundMoney(payable.reduce((acc, x) => acc + x.outstanding_amount, 0));
+        const totalReceivable = roundMoney(receivable.reduce((acc, x) => acc + x.outstanding_amount, 0));
+
+        res.json({
+            payable,
+            receivable,
+            total_payable: totalPayable,
+            total_receivable: totalReceivable
+        });
+    } catch (err) {
+        res.status(500).json({ error: formatUserError(err, 'Failed to fetch outstanding expenses.') });
+    }
+});
+
+// Dual Settlement: Allocations for a specific settlement
+app.get('/api/settlements/:id/allocations', async (req, res) => {
+    try {
+        const userId = actingUserId(req);
+        if (!userId) return res.status(401).json({ error: 'Authentication required.' });
+        const settlementId = parseInt(req.params.id);
+
+        const result = await pool.query(`
+            SELECT sa.id, sa.settlement_id, sa.expense_id, sa.amount, sa.created_at,
+                   e.description AS expense_description, e.expense_date, e.currency,
+                   d.id AS debtor_id, d.name AS debtor_name, d.avatar_initials AS debtor_initials,
+                   c.id AS creditor_id, c.name AS creditor_name, c.avatar_initials AS creditor_initials
+            FROM settlement_allocations sa
+            JOIN expenses e ON e.id = sa.expense_id
+            JOIN users d ON d.id = sa.debtor_id
+            JOIN users c ON c.id = sa.creditor_id
+            WHERE sa.settlement_id = $1
+            ORDER BY sa.id ASC
+        `, [settlementId]);
+
+        res.json({ allocations: result.rows, settlement_id: settlementId });
+    } catch (err) {
+        res.status(500).json({ error: formatUserError(err, 'Failed to fetch settlement allocations.') });
+    }
+});
+
+// Dual Settlement: Expense settlement status and payment history
+app.get('/api/expenses/:id/settlements', async (req, res) => {
+    try {
+        const userId = actingUserId(req);
+        if (!userId) return res.status(401).json({ error: 'Authentication required.' });
+        const expenseId = parseInt(req.params.id);
+
+        const liabData = await getExpenseOutstandingLiabilities(pool, expenseId);
+        if (!liabData) return res.status(404).json({ error: 'Expense not found.' });
+
+        const allocRes = await pool.query(`
+            SELECT sa.id, sa.settlement_id, sa.amount, sa.created_at,
+                   s.payment_method, s.transaction_reference, s.notes,
+                   d.id AS debtor_id, d.name AS debtor_name, d.avatar_initials AS debtor_initials,
+                   c.id AS creditor_id, c.name AS creditor_name, c.avatar_initials AS creditor_initials
+            FROM settlement_allocations sa
+            JOIN settlements s ON s.id = sa.settlement_id
+            JOIN users d ON d.id = sa.debtor_id
+            JOIN users c ON c.id = sa.creditor_id
+            WHERE sa.expense_id = $1
+            ORDER BY sa.created_at DESC, sa.id DESC
+        `, [expenseId]);
+
+        const totalLiabilities = liabData.liabilities.reduce((acc, l) => acc + l.gross_liability, 0);
+        const totalOutstanding = liabData.liabilities.reduce((acc, l) => acc + l.outstanding_amount, 0);
+        const totalSettled = liabData.liabilities.reduce((acc, l) => acc + l.already_settled, 0);
+
+        let settlementStatus = 'UNSETTLED';
+        if (totalOutstanding <= 0.005 && totalSettled > 0.005) {
+            settlementStatus = 'FULLY_SETTLED';
+        } else if (totalSettled > 0.005) {
+            settlementStatus = 'PARTIALLY_SETTLED';
+        }
+
+        res.json({
+            expense: liabData.expense,
+            liabilities: liabData.liabilities,
+            allocations: allocRes.rows,
+            summary: {
+                total_liabilities: roundMoney(totalLiabilities),
+                total_settled: roundMoney(totalSettled),
+                total_outstanding: roundMoney(totalOutstanding),
+                settlement_status: settlementStatus
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: formatUserError(err, 'Failed to fetch expense settlement details.') });
+    }
+});
+
+// Record Settlement (Expense-Wise or Combined)
 app.post('/api/settlements', async (req, res) => {
     const client = await pool.connect();
     try {
@@ -4013,6 +4397,9 @@ app.post('/api/settlements', async (req, res) => {
         const rId = parseInt(receiver_id || req.body.payee_id);
         const amt = roundMoney(amount);
         const authId = actingUserId(req);
+        const expenseId = req.body.expense_id ? parseInt(req.body.expense_id) : null;
+        const customAllocations = req.body.allocations || null;
+        let settlementType = req.body.settlement_type || (expenseId ? 'EXPENSE_WISE' : (customAllocations ? 'COMBINED' : 'DIRECT'));
 
         if (!pId || !rId || !Number.isFinite(amt) || amt <= 0) {
             await client.query('ROLLBACK');
@@ -4031,7 +4418,7 @@ app.post('/api/settlements', async (req, res) => {
             return res.status(400).json({ error: 'Unsupported payment method.' });
         }
 
-        const dedupeKey = `settle:${pId}:${rId}:${amt}`;
+        const dedupeKey = `settle:${pId}:${rId}:${amt}:${expenseId || 0}`;
         if (dedupeRequest(dedupeKey, 5000)) {
             await client.query('ROLLBACK');
             return res.status(409).json({ error: 'This settlement was just submitted. Duplicate submission prevented.' });
@@ -4052,22 +4439,21 @@ app.post('/api/settlements', async (req, res) => {
                 await client.query('ROLLBACK');
                 return res.status(403).json({ error: 'Both parties must be members of the selected circle.' });
             }
-        } else {
-            const grpFind = await client.query(`
-                SELECT e.group_id 
-                FROM expense_splits es
-                JOIN expenses e ON es.expense_id = e.id
-                WHERE es.user_id = $1 AND e.paid_by = $2 AND (es.base_amount - es.settled_amount_base) > 0.005
-                ORDER BY e.expense_date ASC
-                LIMIT 1
-            `, [pId, rId]);
-            if (grpFind.rows.length > 0) effectiveGroupId = grpFind.rows[0].group_id;
+        } else if (expenseId) {
+            const expRes = await client.query('SELECT group_id FROM expenses WHERE id = $1', [expenseId]);
+            if (expRes.rows.length > 0) effectiveGroupId = expRes.rows[0].group_id;
         }
 
-        // Apply the payment to the debtor's outstanding splits (partial-safe).
+        // Apply payment using unified dual-settlement engine
         const applied = await applyPaymentToSplits(client, {
-            payerId: pId, receiverId: rId, amount: amt, groupId: effectiveGroupId
+            payerId: pId,
+            receiverId: rId,
+            amount: amt,
+            groupId: effectiveGroupId,
+            expenseId,
+            allocations: customAllocations
         });
+
         if (applied.unapplied > 0.005) {
             await client.query('ROLLBACK');
             return res.status(400).json({
@@ -4077,13 +4463,26 @@ app.post('/api/settlements', async (req, res) => {
             });
         }
 
+        if (settlementType === 'DIRECT') {
+            settlementType = applied.allocations.length > 1 ? 'COMBINED' : 'EXPENSE_WISE';
+        }
+
         const ref = transaction_reference || `UPI-${Math.floor(100000 + Math.random() * 900000)}-${String(payment_method).toUpperCase()}`;
 
         const settRes = await client.query(
-            `INSERT INTO settlements (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [effectiveGroupId, pId, rId, applied.appliedTotal, payment_method, ref, sanitizeText(notes, 1000) || '']
+            `INSERT INTO settlements (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes, status, settlement_type, expense_id) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'COMPLETED', $8, $9) RETURNING id`,
+            [effectiveGroupId, pId, rId, applied.appliedTotal, payment_method, ref, sanitizeText(notes, 1000) || '', settlementType, expenseId]
         );
+        const settlementId = settRes.rows[0].id;
+
+        // Persist settlement allocations
+        await recordSettlementAllocations(client, {
+            settlementId,
+            debtorId: pId,
+            creditorId: rId,
+            allocations: applied.allocations
+        });
 
         // Activity log
         const pRes = await client.query('SELECT name FROM users WHERE id = $1', [pId]);
@@ -4091,10 +4490,11 @@ app.post('/api/settlements', async (req, res) => {
         const pName = pRes.rows[0]?.name || 'Payer';
         const rName = rRes.rows[0]?.name || 'Receiver';
 
+        const modeDesc = settlementType === 'EXPENSE_WISE' ? 'for expense' : `across ${applied.allocations.length} expenses`;
         await client.query(
             `INSERT INTO activity_logs (user_id, group_id, activity_type, message) 
-             VALUES ($1, $2, 'SETTLEMENT', $3 || ' settled ₹' || $4 || ' with ' || $5 || ' via ' || $6)`,
-            [pId, effectiveGroupId, pName, applied.appliedTotal.toFixed(2), rName, payment_method]
+             VALUES ($1, $2, 'SETTLEMENT', $3 || ' settled ₹' || $4 || ' with ' || $5 || ' ' || $6 || ' via ' || $7)`,
+            [pId, effectiveGroupId, pName, applied.appliedTotal.toFixed(2), rName, modeDesc, payment_method]
         );
 
         await client.query('COMMIT');
@@ -4136,9 +4536,11 @@ app.post('/api/settlements', async (req, res) => {
         }
         res.status(201).json({ 
             message: 'Settlement recorded successfully', 
-            id: settRes.rows[0].id, 
+            id: settlementId, 
             reference: ref, 
-            settlement: { id: settRes.rows[0].id, amount: applied.appliedTotal, payer_id: pId, receiver_id: rId } ,
+            settlement_type: settlementType,
+            allocations: applied.allocations,
+            settlement: { id: settlementId, amount: applied.appliedTotal, payer_id: pId, receiver_id: rId, settlement_type: settlementType, expense_id: expenseId } ,
             remaining_balance: 0
         });
     } catch (err) {
@@ -4159,6 +4561,9 @@ app.post('/api/settlements/qr-complete', async (req, res) => {
         const pId = parseInt(payer_id);
         const rId = parseInt(receiver_id);
         const authId = actingUserId(req);
+        const expenseId = req.body.expense_id ? parseInt(req.body.expense_id) : null;
+        const customAllocations = req.body.allocations || null;
+        let settlementType = req.body.settlement_type || (expenseId ? 'EXPENSE_WISE' : 'COMBINED');
 
         if (!pId || !rId || !Number.isFinite(amt) || amt <= 0) {
             await client.query('ROLLBACK');
@@ -4173,7 +4578,7 @@ app.post('/api/settlements/qr-complete', async (req, res) => {
             return res.status(403).json({ error: 'Permission denied: you can only complete your own payment.' });
         }
 
-        const dedupeKey = `settle_qr:${pId}:${rId}:${amt}`;
+        const dedupeKey = `settle_qr:${pId}:${rId}:${amt}:${expenseId || 0}`;
         if (dedupeRequest(dedupeKey, 5000)) {
             await client.query('ROLLBACK');
             return res.status(409).json({ error: 'This QR settlement was just submitted. Duplicate prevented.' });
@@ -4181,19 +4586,19 @@ app.post('/api/settlements/qr-complete', async (req, res) => {
 
         const qrRef = transaction_ref || `UPI-QR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-        // Resolve the circle from the outstanding splits, then apply the payment.
-        const grpFind = await client.query(`
-            SELECT e.group_id
-            FROM expense_splits es
-            JOIN expenses e ON es.expense_id = e.id
-            WHERE es.user_id = $1 AND e.paid_by = $2 AND (es.amount - es.settled_amount) > 0.005
-            ORDER BY e.expense_date ASC
-            LIMIT 1
-        `, [pId, rId]);
-        const effectiveGroupId = grpFind.rows[0]?.group_id || null;
+        let effectiveGroupId = req.body.group_id ? parseInt(req.body.group_id) : null;
+        if (!effectiveGroupId && expenseId) {
+            const expRes = await client.query('SELECT group_id FROM expenses WHERE id = $1', [expenseId]);
+            if (expRes.rows.length > 0) effectiveGroupId = expRes.rows[0].group_id;
+        }
 
         const applied = await applyPaymentToSplits(client, {
-            payerId: pId, receiverId: rId, amount: amt, groupId: effectiveGroupId
+            payerId: pId,
+            receiverId: rId,
+            amount: amt,
+            groupId: effectiveGroupId,
+            expenseId,
+            allocations: customAllocations
         });
         if (applied.unapplied > 0.005) {
             await client.query('ROLLBACK');
@@ -4205,10 +4610,18 @@ app.post('/api/settlements/qr-complete', async (req, res) => {
         }
 
         const settRes = await client.query(
-            `INSERT INTO settlements (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes) 
-             VALUES ($1, $2, $3, $4, 'UPI_QR', $5, $6) RETURNING id`,
-            [effectiveGroupId, pId, rId, applied.appliedTotal, qrRef, notes || `Automated settlement via UPI QR Scan (${upi_id || 'QR'})`]
+            `INSERT INTO settlements (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes, status, settlement_type, expense_id) 
+             VALUES ($1, $2, $3, $4, 'UPI_QR', $5, $6, 'COMPLETED', $7, $8) RETURNING id`,
+            [effectiveGroupId, pId, rId, applied.appliedTotal, qrRef, notes || `Automated settlement via UPI QR Scan (${upi_id || 'QR'})`, settlementType, expenseId]
         );
+        const settlementId = settRes.rows[0].id;
+
+        await recordSettlementAllocations(client, {
+            settlementId,
+            debtorId: pId,
+            creditorId: rId,
+            allocations: applied.allocations
+        });
 
         const pRes = await client.query('SELECT name FROM users WHERE id = $1', [pId]);
         const rRes = await client.query('SELECT name FROM users WHERE id = $1', [rId]);
@@ -4326,6 +4739,9 @@ initUpiTables();
 async function initPaymentRequestTables() {
     try {
         await pool.query(`
+            ALTER TABLE settlements ADD COLUMN IF NOT EXISTS settlement_type VARCHAR(32) DEFAULT 'DIRECT';
+            ALTER TABLE settlements ADD COLUMN IF NOT EXISTS expense_id INTEGER REFERENCES expenses(id) ON DELETE SET NULL;
+
             CREATE TABLE IF NOT EXISTS payment_requests (
                 id SERIAL PRIMARY KEY,
                 request_code VARCHAR(64) UNIQUE NOT NULL,
@@ -4343,6 +4759,8 @@ async function initPaymentRequestTables() {
                 status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
                 verification_source VARCHAR(32) NOT NULL DEFAULT 'RECEIVER_CONFIRMED',
                 settlement_id INTEGER REFERENCES settlements(id) ON DELETE SET NULL,
+                settlement_type VARCHAR(32) DEFAULT 'EXPENSE_WISE',
+                expense_allocations JSONB,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 responded_at TIMESTAMP WITH TIME ZONE,
                 responded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -4352,6 +4770,24 @@ async function initPaymentRequestTables() {
             ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verification_source VARCHAR(32) NOT NULL DEFAULT 'RECEIVER_CONFIRMED';
             ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS expense_description_snapshot VARCHAR(255);
             ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS expense_date_snapshot DATE;
+            ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS settlement_type VARCHAR(32) DEFAULT 'EXPENSE_WISE';
+            ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS expense_allocations JSONB;
+
+            CREATE TABLE IF NOT EXISTS settlement_allocations (
+                id SERIAL PRIMARY KEY,
+                settlement_id INTEGER NOT NULL REFERENCES settlements(id) ON DELETE CASCADE,
+                expense_id INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+                debtor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                creditor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                amount NUMERIC(14, 2) NOT NULL CHECK (amount > 0),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_settlement_allocations_settlement ON settlement_allocations(settlement_id);
+            CREATE INDEX IF NOT EXISTS idx_settlement_allocations_expense ON settlement_allocations(expense_id);
+            CREATE INDEX IF NOT EXISTS idx_settlement_allocations_debtor ON settlement_allocations(debtor_id);
+            CREATE INDEX IF NOT EXISTS idx_settlement_allocations_creditor ON settlement_allocations(creditor_id);
+
             CREATE INDEX IF NOT EXISTS idx_payment_requests_payer ON payment_requests(payer_id, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_payment_requests_receiver ON payment_requests(receiver_id, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_payment_requests_status ON payment_requests(status);
@@ -4362,9 +4798,9 @@ async function initPaymentRequestTables() {
                 ON payment_requests (idempotency_key)
                 WHERE idempotency_key IS NOT NULL;
         `);
-        console.log('✓ Manual Payment Confirmation Request Tables Ready');
+        console.log('✓ Manual Payment Confirmation & Dual Settlement Tables Ready');
     } catch (err) {
-        console.error('Error creating payment_requests table:', err);
+        console.error('Error creating payment_requests / settlement_allocations tables:', err);
     }
 }
 initPaymentRequestTables();
@@ -4377,21 +4813,14 @@ function paymentRequestMethod(value) {
 }
 
 async function paymentRequestOutstanding(db, { payerId, receiverId, groupId = null, expenseId = null }) {
-    const params = [payerId, receiverId];
-    let filters = '';
-    if (groupId) { params.push(groupId); filters += ` AND e.group_id = $${params.length}`; }
-    if (expenseId) { params.push(expenseId); filters += ` AND e.id = $${params.length}`; }
-    const result = await db.query(`
-        SELECT COALESCE(SUM(es.base_amount - es.settled_amount_base), 0) AS outstanding
-        FROM expense_splits es
-        JOIN expenses e ON e.id = es.expense_id
-        WHERE es.user_id = $1
-          AND e.paid_by = $2
-          AND es.user_id <> e.paid_by
-          AND (es.base_amount - es.settled_amount_base) > 0.005
-          ${filters}
-    `, params);
-    return roundMoney(result.rows[0]?.outstanding || 0);
+    const list = await getOutstandingExpenses(db, {
+        debtorId: payerId,
+        creditorId: receiverId,
+        groupId,
+        expenseId
+    });
+    const total = list.reduce((sum, item) => sum + item.outstanding_amount, 0);
+    return roundMoney(total);
 }
 
 // ==========================================
@@ -4419,9 +4848,10 @@ app.post('/api/payment-requests', async (req, res) => {
             return res.status(401).json({ error: 'Authentication required.' });
         }
 
-        let receiverId = parseInt(req.body.receiver_id || req.body.payee_id);
-        let groupId = req.body.group_id ? parseInt(req.body.group_id) : null;
+        let receiverId = (req.body.receiver_id || req.body.payee_id) ? parseInt(req.body.receiver_id || req.body.payee_id) : null;
+        let groupId = req.body.group_id && req.body.group_id !== 'all' ? parseInt(req.body.group_id) : null;
         const expenseId = req.body.expense_id ? parseInt(req.body.expense_id) : null;
+        const customAllocations = req.body.allocations || req.body.expense_allocations || null;
         const amount = roundMoney(req.body.amount);
         const method = paymentRequestMethod(req.body.payment_method);
         const note = sanitizeText(req.body.note, 500) || '';
@@ -4439,38 +4869,48 @@ app.post('/api/payment-requests', async (req, res) => {
 
         let expense = null;
         let outstanding = 0;
+        let settlementType = req.body.settlement_type || (expenseId ? 'EXPENSE_WISE' : 'COMBINED');
+        let plannedAllocations = [];
 
         if (expenseId) {
-            const expenseRes = await client.query(`
-                SELECT e.id, e.group_id, e.paid_by, e.description, e.expense_date, e.currency,
-                       g.name AS group_name, g.is_locked,
-                       es.base_amount, es.settled_amount_base
-                FROM expenses e
-                JOIN groups g ON g.id = e.group_id
-                JOIN expense_splits es ON es.expense_id = e.id AND es.user_id = $2
-                WHERE e.id = $1
-                FOR UPDATE OF es
-            `, [expenseId, payerId]);
-            if (expenseRes.rows.length === 0) {
+            const expLiab = await getExpenseOutstandingLiabilities(client, expenseId);
+            if (!expLiab) {
                 await client.query('ROLLBACK');
-                return res.status(404).json({ error: 'Expense not found, or you are not a participant in it.' });
+                return res.status(404).json({ error: 'Expense not found.' });
             }
-            expense = expenseRes.rows[0];
-            if (Number(expense.paid_by) === Number(payerId)) {
-                await client.query('ROLLBACK');
-                return res.status(400).json({ error: 'You paid this expense; only a member who owes you can mark it as paid.' });
-            }
-            if (receiverId && Number(receiverId) !== Number(expense.paid_by)) {
-                await client.query('ROLLBACK');
-                return res.status(400).json({ error: 'The receiver must be the member who paid this expense.' });
-            }
-            receiverId = Number(expense.paid_by);
+            expense = expLiab.expense;
             groupId = expense.group_id;
-            if (expense.is_locked) {
+
+            const myLiabs = expLiab.liabilities.filter(l => l.debtor_id === payerId);
+            if (myLiabs.length === 0) {
                 await client.query('ROLLBACK');
-                return res.status(400).json({ error: 'This circle is locked. Unlock it before sending a Mark as Paid request.' });
+                return res.status(400).json({ error: 'You do not owe anything for this expense.' });
             }
-            outstanding = roundMoney(parseFloat(expense.base_amount || 0) - parseFloat(expense.settled_amount_base || 0));
+
+            let targetLiab = null;
+            if (receiverId) {
+                targetLiab = myLiabs.find(l => l.creditor_id === receiverId);
+            } else if (myLiabs.length === 1) {
+                targetLiab = myLiabs[0];
+                receiverId = targetLiab.creditor_id;
+            } else {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Please select which member you are paying for this expense.' });
+            }
+
+            if (!targetLiab || targetLiab.outstanding_amount <= 0.005) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'You have no outstanding liability owed to this member for this expense.' });
+            }
+
+            outstanding = targetLiab.outstanding_amount;
+            settlementType = 'EXPENSE_WISE';
+            plannedAllocations = [{
+                expense_id: expenseId,
+                amount: Math.min(amount, outstanding),
+                description: expense.description,
+                expense_date: expense.expense_date
+            }];
         } else {
             if (!receiverId) {
                 await client.query('ROLLBACK');
@@ -4495,7 +4935,25 @@ app.post('/api/payment-requests', async (req, res) => {
                     return res.status(403).json({ error: 'Both parties must be members of the selected circle.' });
                 }
             }
-            outstanding = await paymentRequestOutstanding(client, { payerId, receiverId, groupId });
+
+            settlementType = 'COMBINED';
+            const planned = await applyPaymentToSplits(client, {
+                payerId,
+                receiverId,
+                amount,
+                groupId,
+                allocations: customAllocations
+            });
+            if (planned.unapplied > 0.005) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    error: `The amount exceeds your outstanding balance. You currently owe ₹${planned.appliedTotal.toFixed(2)}.`,
+                    code: 'AMOUNT_EXCEEDS_OUTSTANDING',
+                    max_amount: planned.appliedTotal
+                });
+            }
+            outstanding = planned.appliedTotal;
+            plannedAllocations = planned.allocations;
         }
 
         if (Number(receiverId) === Number(payerId)) {
@@ -4551,17 +5009,17 @@ app.post('/api/payment-requests', async (req, res) => {
             INSERT INTO payment_requests
                 (request_code, payer_id, receiver_id, group_id, expense_id, amount, currency,
                  payment_method, transaction_reference, expense_description_snapshot, expense_date_snapshot,
-                 note, status, verification_source, idempotency_key)
-            VALUES ($1, $2, $3, $4, $5, $6, 'INR', $7, $8, $9, $10, $11, 'PENDING', 'RECEIVER_CONFIRMED', $12)
+                 note, status, verification_source, idempotency_key, settlement_type, expense_allocations)
+            VALUES ($1, $2, $3, $4, $5, $6, 'INR', $7, $8, $9, $10, $11, 'PENDING', 'RECEIVER_CONFIRMED', $12, $13, $14)
             RETURNING *
         `, [requestCode, payerId, receiverId, groupId, expenseId, amount, method, reference || null,
             expense ? expense.description : null, expense ? expense.expense_date : null,
-            note || null, idempotencyKey]);
+            note || null, idempotencyKey, settlementType, JSON.stringify(plannedAllocations)]);
 
         const receiverName = receiverRes.rows[0].name;
         const payerRes = await client.query('SELECT name FROM users WHERE id = $1', [payerId]);
         const payerName = payerRes.rows[0]?.name || 'Member';
-        const subject = expense ? `for “${expense.description}”` : 'for your outstanding balance';
+        const subject = expense ? `for “${expense.description}”` : (settlementType === 'COMBINED' ? `across ${plannedAllocations.length} expenses` : 'for your outstanding balance');
         await client.query(`
             INSERT INTO activity_logs (user_id, group_id, activity_type, message)
             VALUES ($1, $2, 'PAYMENT_REQUEST_SENT', $3)
@@ -4680,7 +5138,8 @@ app.post('/api/payment-requests/:id/accept', async (req, res) => {
             receiverId: pr.receiver_id,
             amount,
             groupId: pr.group_id,
-            expenseId: pr.expense_id
+            expenseId: pr.expense_id,
+            allocations: pr.expense_allocations
         });
         if (applied.unapplied > 0.005) {
             await client.query('ROLLBACK');
@@ -4693,19 +5152,29 @@ app.post('/api/payment-requests/:id/accept', async (req, res) => {
 
         const reference = pr.transaction_reference || `MANUAL-${pr.request_code}`;
         const settlementNote = `Manual payment request ${pr.request_code}${pr.note ? ' — ' + pr.note : ''}`;
+        const settlementType = pr.settlement_type || (pr.expense_id ? 'EXPENSE_WISE' : 'COMBINED');
+
         const settlementRes = await client.query(`
             INSERT INTO settlements
-                (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, 'COMPLETED')
+                (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes, status, settlement_type, expense_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'COMPLETED', $8, $9)
             RETURNING *
-        `, [pr.group_id, pr.payer_id, pr.receiver_id, applied.appliedTotal, pr.payment_method, reference, settlementNote.slice(0, 1000)]);
+        `, [pr.group_id, pr.payer_id, pr.receiver_id, applied.appliedTotal, pr.payment_method, reference, settlementNote.slice(0, 1000), settlementType, pr.expense_id]);
+        const settlementId = settlementRes.rows[0].id;
+
+        await recordSettlementAllocations(client, {
+            settlementId,
+            debtorId: pr.payer_id,
+            creditorId: pr.receiver_id,
+            allocations: applied.allocations
+        });
 
         const updated = await client.query(`
             UPDATE payment_requests
             SET status = 'ACCEPTED', settlement_id = $1, responded_at = NOW(), responded_by = $2
             WHERE id = $3 AND status = 'PENDING'
             RETURNING *
-        `, [settlementRes.rows[0].id, userId, requestId]);
+        `, [settlementId, userId, requestId]);
         if (updated.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(409).json({ error: 'This request was already processed.' });
@@ -4723,6 +5192,7 @@ app.post('/api/payment-requests/:id/accept', async (req, res) => {
             request: mapPaymentRequestRow(updated.rows[0]),
             settlement: settlementRes.rows[0],
             amount_applied: applied.appliedTotal,
+            allocations: applied.allocations,
             message: 'Payment accepted and the ledger has been updated.'
         });
     } catch (err) {
@@ -4932,8 +5402,8 @@ async function processWebhookPaymentEvent(payload) {
         });
 
         const settRes = await client.query(`
-            INSERT INTO settlements (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes)
-            VALUES ($1, $2, $3, $4, 'UPI', $5, $6)
+            INSERT INTO settlements (group_id, payer_id, receiver_id, amount, payment_method, transaction_reference, notes, status, settlement_type)
+            VALUES ($1, $2, $3, $4, 'UPI', $5, $6, 'COMPLETED', $7)
             RETURNING id
         `, [
             pr.group_id || null,
@@ -4942,10 +5412,18 @@ async function processWebhookPaymentEvent(payload) {
             expectedAmt,
             effectiveRef,
             (pr.notes || `Automated settlement via verified UPI Payment (UTR: ${effectiveUtr})`) +
-                (applied.unapplied > 0.005 ? ` [Unapplied overpayment: ₹${applied.unapplied.toFixed(2)}]` : '')
+                (applied.unapplied > 0.005 ? ` [Unapplied overpayment: ₹${applied.unapplied.toFixed(2)}]` : ''),
+            applied.allocations.length > 1 ? 'COMBINED' : 'EXPENSE_WISE'
         ]);
 
         const settlementId = settRes.rows[0].id;
+
+        await recordSettlementAllocations(client, {
+            settlementId,
+            debtorId: pr.payer_id,
+            creditorId: pr.receiver_id,
+            allocations: applied.allocations
+        });
 
         // 5. Update Activity Audit Ledger
         await client.query(`
@@ -7671,10 +8149,17 @@ app.post('/api/chatbot/confirm-action', async (req, res) => {
             }
 
             const settRes = await client.query(`
-                INSERT INTO settlements (payer_id, receiver_id, amount, payment_method, transaction_reference, notes)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO settlements (payer_id, receiver_id, amount, payment_method, transaction_reference, notes, status, settlement_type)
+                VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETED', $7)
                 RETURNING id, payer_id, receiver_id, amount, created_at
-            `, [payerId, receiverId, applied.appliedTotal, paymentMethod, ref, notes]);
+            `, [payerId, receiverId, applied.appliedTotal, paymentMethod, ref, notes, applied.allocations.length > 1 ? 'COMBINED' : 'EXPENSE_WISE']);
+
+            await recordSettlementAllocations(client, {
+                settlementId: settRes.rows[0].id,
+                debtorId: payerId,
+                creditorId: receiverId,
+                allocations: applied.allocations
+            });
 
             await client.query(`
                 INSERT INTO activity_logs (user_id, group_id, activity_type, message)
