@@ -556,25 +556,42 @@ app.post('/api/auth/verify-signup-otp', async (req, res) => {
         }
 
         // 6. Insert new verified user into Supabase auth.users, auth.identities, public.profiles & public.users
-        const authUserId = crypto.randomUUID();
+        let authUserId = crypto.randomUUID();
 
-        // 6.1 Insert into auth.users (Supabase Authentication table)
-        await pool.query(`
-            INSERT INTO auth.users (
-                id, instance_id, email, encrypted_password, email_confirmed_at,
-                created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
-                is_super_admin, role, aud
-            ) VALUES (
-                $1::uuid, '00000000-0000-0000-0000-000000000000', $2, $3, NOW(),
-                NOW(), NOW(), '{"provider":"email","providers":["email"]}'::jsonb,
-                $4, FALSE, 'authenticated', 'authenticated'
-            )
-        `, [
-            authUserId,
-            normalizedEmail,
-            password_hash,
-            JSON.stringify({ name: name.trim(), avatar_initials: avatar_initials || 'US', upi_id: upi_id || null, phone: phone || null })
-        ]);
+        // 6.1 Sync with auth.users (Supabase Authentication table)
+        const existingAuthUser = await pool.query('SELECT id FROM auth.users WHERE LOWER(email) = LOWER($1)', [normalizedEmail]);
+        if (existingAuthUser.rows.length > 0) {
+            authUserId = existingAuthUser.rows[0].id;
+            await pool.query(`
+                UPDATE auth.users SET
+                    encrypted_password = $2,
+                    raw_user_meta_data = $3,
+                    email_confirmed_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = $1
+            `, [
+                authUserId,
+                password_hash,
+                JSON.stringify({ name: name.trim(), avatar_initials: avatar_initials || 'US', upi_id: upi_id || null, phone: phone || null })
+            ]);
+        } else {
+            await pool.query(`
+                INSERT INTO auth.users (
+                    id, instance_id, email, encrypted_password, email_confirmed_at,
+                    created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+                    is_super_admin, role, aud
+                ) VALUES (
+                    $1::uuid, '00000000-0000-0000-0000-000000000000', $2, $3, NOW(),
+                    NOW(), NOW(), '{"provider":"email","providers":["email"]}'::jsonb,
+                    $4, FALSE, 'authenticated', 'authenticated'
+                )
+            `, [
+                authUserId,
+                normalizedEmail,
+                password_hash,
+                JSON.stringify({ name: name.trim(), avatar_initials: avatar_initials || 'US', upi_id: upi_id || null, phone: phone || null })
+            ]);
+        }
 
         // 6.2 Insert into auth.identities
         await pool.query(`

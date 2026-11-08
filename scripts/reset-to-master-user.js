@@ -86,7 +86,7 @@ async function resetDatabase() {
         await client.query(`UPDATE system_security_settings SET updated_by = NULL`);
         console.log('  ✓ Updated custom_email_templates and system_security_settings');
 
-        // 4. Purge all other profiles and users
+        // 4. Purge all other profiles and users (including Supabase auth schema)
         console.log('\n[3/5] Purging all users except Charlie...');
         const delProfiles = await client.query(`
             DELETE FROM profiles WHERE LOWER(email) != 'nxtcharlie20@gmail.com'
@@ -97,6 +97,20 @@ async function resetDatabase() {
             DELETE FROM users WHERE LOWER(email) != 'nxtcharlie20@gmail.com'
         `);
         console.log(`  ✓ Removed ${delUsers.rowCount} other users`);
+
+        try {
+            await client.query(`
+                DELETE FROM auth.identities WHERE user_id IN (
+                    SELECT id FROM auth.users WHERE LOWER(email) != 'nxtcharlie20@gmail.com'
+                )
+            `);
+            const delAuthUsers = await client.query(`
+                DELETE FROM auth.users WHERE LOWER(email) != 'nxtcharlie20@gmail.com'
+            `);
+            console.log(`  ✓ Removed ${delAuthUsers.rowCount} other Supabase auth accounts`);
+        } catch (authPurgeErr) {
+            console.warn(`  ⚠️ Supabase auth schema purge notice: ${authPurgeErr.message}`);
+        }
 
         // 5. Elevate and standardize Charlie as Master User (ID 1)
         console.log('\n[4/5] Elevating Charlie to Master User (ID 1, role: master_admin)...');
