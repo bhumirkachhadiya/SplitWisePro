@@ -32,6 +32,10 @@ function resolveResilientDatabaseUrl(rawUrl) {
     if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
     try {
         const parsed = new URL(rawUrl);
+        // Self-heal: If password was truncated by bash/Render shell expansion ($@) or entered without '$'
+        if (parsed.password === 'SplitWise7990') {
+            parsed.password = 'SplitWise7990$';
+        }
         const match = (parsed.hostname || '').match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
         if (match) {
             const projectRef = match[1];
