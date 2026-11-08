@@ -4,21 +4,60 @@
  * ==============================================================================
  * Features:
  *  - Shared single connection pool across all backend services
- *  - TCP keepalive enabled to prevent cloud firewalls & Supabase from dropping idle connections
+ *  - Automatic IPv6-to-IPv4 Supabase Pooler translation for Render / cloud hosts
+ *  - DNS prioritization of IPv4 to eliminate ENETUNREACH socket errors
+ *  - TCP keepalive enabled to prevent cloud firewalls from dropping idle connections
  *  - Transparent 1-time retry on socket disconnects / connection timeouts
- *  - Global error resilience against ECONNRESET / EPIPE / 57P01
+ *  - Global error resilience against ECONNRESET / EPIPE / 57P01 / ENETUNREACH
  * ==============================================================================
  */
 
 const { Pool } = require('pg');
+const dns = require('dns');
 require('dotenv').config();
 
-const isSupabaseOrSSL = process.env.NODE_ENV === 'production' || 
-    (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('supabase') || process.env.DATABASE_URL.includes('sslmode=require')));
+// Ensure Node.js prioritizes IPv4 resolution for all outgoing sockets
+if (dns && typeof dns.setDefaultResultOrder === 'function') {
+    dns.setDefaultResultOrder('ipv4first');
+}
 
-const poolConfig = process.env.DATABASE_URL
+/**
+ * Direct Supabase hostnames (db.<ref>.supabase.co:5432) resolve exclusively to IPv6 addresses.
+ * Cloud hosts like Render.com, AWS EC2, and Vercel without IPv6 routing fail with:
+ *   "connect ENETUNREACH 2406:...:5432 - Local (:::0)"
+ * This helper automatically rewrites direct Supabase connections to the official IPv4
+ * Supabase Connection Pooler (Supavisor) so the app works reliably everywhere.
+ */
+function resolveResilientDatabaseUrl(rawUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
+    try {
+        const parsed = new URL(rawUrl);
+        const match = (parsed.hostname || '').match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+        if (match) {
+            const projectRef = match[1];
+            const poolerHost = process.env.SUPABASE_POOLER_HOST || 'aws-0-ap-northeast-2.pooler.supabase.com';
+            parsed.hostname = poolerHost;
+            parsed.port = '6543'; // Supabase Transaction Mode Pooler (IPv4)
+            if (parsed.username === 'postgres' || !parsed.username.includes('.')) {
+                parsed.username = `postgres.${projectRef}`;
+            }
+            console.log(`[Database Pool] Auto-converted IPv6 direct connection to IPv4 Supabase Pooler: ${parsed.hostname}:6543`);
+            return parsed.toString();
+        }
+    } catch (e) {
+        // Fall back to original URL if parsing fails
+    }
+    return rawUrl;
+}
+
+const resolvedDatabaseUrl = resolveResilientDatabaseUrl(process.env.DATABASE_URL);
+
+const isSupabaseOrSSL = process.env.NODE_ENV === 'production' || 
+    (resolvedDatabaseUrl && (resolvedDatabaseUrl.includes('supabase') || resolvedDatabaseUrl.includes('sslmode=require')));
+
+const poolConfig = resolvedDatabaseUrl
     ? {
-        connectionString: process.env.DATABASE_URL,
+        connectionString: resolvedDatabaseUrl,
         ssl: isSupabaseOrSSL ? { rejectUnauthorized: false } : false,
         max: 20,
         idleTimeoutMillis: 30000,
@@ -54,8 +93,10 @@ function isRetryable(err) {
         msg.includes('connection timeout') ||
         msg.includes('socket drop') ||
         msg.includes('econnreset') ||
+        msg.includes('enetunreach') ||
         msg.includes('broken pipe') ||
         code === 'ECONNRESET' ||
+        code === 'ENETUNREACH' ||
         code === '57P01' || // admin shutdown / terminated
         code === '08006' || // connection failure
         code === '08001'    // unable to connect
@@ -86,5 +127,6 @@ pool.query = async function (text, params, callback) {
 
 module.exports = {
     pool,
-    query: pool.query.bind(pool)
+    query: pool.query.bind(pool),
+    resolveResilientDatabaseUrl
 };
