@@ -1412,7 +1412,7 @@ app.get('/api/system/diagnostic', async (req, res) => {
 
     res.json({
         app: 'SplitWisePro',
-        version: '1.0.7',
+        version: '1.0.8',
         time: new Date().toISOString(),
         node: process.version,
         database: {

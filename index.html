@@ -475,6 +475,9 @@
 
         /* Mobile Sidebar Off-Canvas (< 1024px) */
         @media (max-width: 1023px) {
+            body.mobile-sidebar-open {
+                overflow: hidden;
+            }
             #appSidebar {
                 width: 18rem !important;
                 transform: translateX(-100%);
@@ -498,6 +501,19 @@
             }
             .sidebar-text {
                 display: inline !important;
+            }
+        }
+
+        /* Mobile Search Dropdown Positioning (< 640px) */
+        @media (max-width: 639px) {
+            #masterSearchDropdown {
+                position: fixed !important;
+                left: 0.75rem !important;
+                right: 0.75rem !important;
+                top: 4.25rem !important;
+                width: auto !important;
+                max-width: calc(100vw - 1.5rem) !important;
+                z-index: 50 !important;
             }
         }
 
@@ -1015,7 +1031,10 @@
     <div id="appWorkspace" class="hidden min-h-screen bg-surface">
         
         <!-- Mobile Sidebar Backdrop -->
-        <div id="mobileSidebarBackdrop" onclick="closeMobileSidebar()" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden transition-opacity"></div>
+        <div id="mobileSidebarBackdrop" onclick="closeMobileSidebar(event)" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden transition-opacity cursor-pointer"></div>
+
+        <!-- Master Search Mobile Backdrop -->
+        <div id="masterSearchBackdrop" onclick="closeMasterSearchDropdown()" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-30 sm:hidden transition-opacity cursor-pointer"></div>
 
         <!-- FLOATING EXECUTIVE SIDEBAR -->
         <aside id="appSidebar" class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest border-r border-outline-variant z-50 flex flex-col justify-between transition-all duration-300">
@@ -1043,8 +1062,8 @@
                         <span class="material-symbols-outlined text-[20px]" id="sidebarCollapseIcon">dock_to_left</span>
                     </button>
                     <!-- Mobile Close Button -->
-                    <button onclick="closeMobileSidebar()" class="lg:hidden p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" title="Close Menu">
-                        <span class="material-symbols-outlined text-[18px]">close</span>
+                    <button id="mobileSidebarCloseBtn" onclick="closeMobileSidebar(event)" type="button" class="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-90 transition-all cursor-pointer flex-shrink-0" title="Close Menu" aria-label="Close Menu">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
                     </button>
                 </div>
 
@@ -1175,10 +1194,10 @@
         </aside>
 
         <!-- FLOATING TOP COMMAND BAR -->
-        <header id="appHeader" class="fixed top-0 left-0 lg:left-64 right-0 h-16 qw-glass border-b border-outline-variant z-40 px-4 sm:px-6 flex items-center justify-between gap-4 transition-all duration-300">
+        <header id="appHeader" class="fixed top-0 left-0 lg:left-64 right-0 h-16 qw-glass border-b border-outline-variant z-40 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300">
             <!-- Left Command & Search -->
-            <div class="flex items-center gap-3 flex-1 max-w-lg min-w-0">
-                <button id="sidebarToggleBtn" onclick="handleMenuClick()" class="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors flex-shrink-0" title="Toggle Sidebar (Ctrl+B)">
+            <div class="flex items-center gap-2 sm:gap-3 flex-1 max-w-lg min-w-0">
+                <button id="sidebarToggleBtn" onclick="handleMenuClick(event)" class="p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors flex-shrink-0" title="Toggle Sidebar (Ctrl+B)">
                     <span class="material-symbols-outlined text-[20px]" id="headerSidebarToggleIcon">menu</span>
                 </button>
                 
@@ -1186,14 +1205,14 @@
                     <button id="masterSearchBtn" onclick="executeMasterSearch()" type="button" class="absolute left-1.5 p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors z-10 flex items-center justify-center cursor-pointer" title="Execute Search (Enter)">
                         <span class="material-symbols-outlined text-[18px]">search</span>
                     </button>
-                    <input id="globalSearchInput" oninput="handleMasterSearchInput(this.value)" onkeydown="handleMasterSearchKeydown(event)" onfocus="handleMasterSearchFocus()" class="qw-input pl-9 pr-14 py-1.5 text-xs rounded-xl w-full" placeholder="Quick search ledger, peers, circles... ('/')" type="text" autocomplete="off"/>
-                    <button id="masterSearchClearBtn" onclick="clearMasterSearch()" type="button" class="hidden absolute right-8 p-1 text-on-surface-variant hover:text-on-surface z-10 flex items-center justify-center" title="Clear Search">
+                    <input id="globalSearchInput" oninput="handleMasterSearchInput(this.value)" onkeydown="handleMasterSearchKeydown(event)" onfocus="handleMasterSearchFocus()" class="qw-input pl-9 pr-8 sm:pr-14 py-1.5 text-xs rounded-xl w-full placeholder:text-on-surface-variant/60 focus:ring-2 focus:ring-primary/30 transition-all" placeholder="Search expenses, circles..." type="text" autocomplete="off"/>
+                    <button id="masterSearchClearBtn" onclick="clearMasterSearch()" type="button" class="hidden absolute right-2 sm:right-8 p-1 text-on-surface-variant hover:text-on-surface z-10 flex items-center justify-center cursor-pointer" title="Clear Search">
                         <span class="material-symbols-outlined text-[14px]">close</span>
                     </button>
                     <kbd class="hidden sm:inline absolute right-2.5 px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant text-[10px] font-mono font-bold">/</kbd>
 
                     <!-- Live Master Search Dropdown Palette -->
-                    <div id="masterSearchDropdown" class="hidden absolute top-full left-0 right-0 mt-2 z-50 qw-card shadow-2xl p-3 max-h-[28rem] overflow-y-auto space-y-2 border border-outline-variant/60 backdrop-blur-xl bg-surface/95 text-xs">
+                    <div id="masterSearchDropdown" class="hidden absolute top-full left-0 right-0 mt-2 z-50 qw-card shadow-2xl p-3 sm:p-3.5 max-h-[75vh] sm:max-h-[28rem] overflow-y-auto space-y-2 border border-outline-variant/60 backdrop-blur-xl bg-surface/95 text-xs rounded-2xl sm:rounded-xl">
                         <!-- Populated dynamically by updateMasterSearchResults() -->
                     </div>
                 </div>
@@ -4136,6 +4155,8 @@
         window.closeMasterSearchDropdown = function() {
             const dd = document.getElementById('masterSearchDropdown');
             if (dd) dd.classList.add('hidden');
+            const backdrop = document.getElementById('masterSearchBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
         };
 
         window.selectMasterSearchExpense = function(expId, desc) {
@@ -4171,40 +4192,71 @@
             const dd = document.getElementById('masterSearchDropdown');
             if (!dd) return;
 
+            const backdrop = document.getElementById('masterSearchBackdrop');
+            if (backdrop) backdrop.classList.remove('hidden');
+
             const q = (rawQuery || '').trim().toLowerCase();
             dd.classList.remove('hidden');
 
             if (!q) {
                 dd.innerHTML = `
-                    <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant flex items-center justify-between">
-                        <span>Quick Navigation</span>
-                        <span class="text-[9px] font-normal text-on-surface-variant/70">Press Enter to search Ledger</span>
+                    <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant flex items-center justify-between gap-2">
+                        <span class="flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[14px] text-primary">explore</span>
+                            <span>Quick Navigation</span>
+                        </span>
+                        <span class="text-[9px] font-normal text-on-surface-variant/70 hidden sm:inline">Press Enter to search Ledger</span>
                     </div>
                     <div class="space-y-1">
-                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('expenses');" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface">
-                            <span class="material-symbols-outlined text-[16px] text-primary">receipt_long</span>
-                            <span class="flex-1">Ledger & Spends</span>
-                            <span class="text-[10px] text-on-surface-variant">View all transactions</span>
+                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('expenses');" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface group">
+                            <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-on-surface text-xs truncate">Ledger & Spends</div>
+                                <div class="text-[11px] text-on-surface-variant truncate">View all transactions and personal entries</div>
+                            </div>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant/40 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                         </button>
-                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('add-expense');" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface">
-                            <span class="material-symbols-outlined text-[16px] text-emerald-500">add_circle</span>
-                            <span class="flex-1">Record New Expense</span>
-                            <span class="text-[10px] text-on-surface-variant">Expense studio</span>
+                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('add-expense');" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface group">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-on-surface text-xs truncate">Record New Expense</div>
+                                <div class="text-[11px] text-on-surface-variant truncate">Fast expense recording and split calculator</div>
+                            </div>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant/40 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                         </button>
-                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('settle');" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface">
-                            <span class="material-symbols-outlined text-[16px] text-indigo-600 dark:text-indigo-400">payments</span>
-                            <span class="flex-1">Settle & Reconcile</span>
-                            <span class="text-[10px] text-on-surface-variant">UPI & debt clearing</span>
+                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('settle');" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface group">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-outlined text-[18px]">payments</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-on-surface text-xs truncate">Settle & Reconcile</div>
+                                <div class="text-[11px] text-on-surface-variant truncate">Instant UPI QR & balance clearing</div>
+                            </div>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant/40 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                         </button>
-                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('groups');" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface">
-                            <span class="material-symbols-outlined text-[16px] text-amber-500">groups</span>
-                            <span class="flex-1">Circles & Vaults</span>
-                            <span class="text-[10px] text-on-surface-variant">Manage groups</span>
+                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('groups');" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface group">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-outlined text-[18px]">groups</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-on-surface text-xs truncate">Circles & Vaults</div>
+                                <div class="text-[11px] text-on-surface-variant truncate">Manage group members and collective funds</div>
+                            </div>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant/40 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                         </button>
-                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('analytics');" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface">
-                            <span class="material-symbols-outlined text-[16px] text-teal-400">monitoring</span>
-                            <span class="flex-1">Financial Intelligence</span>
-                            <span class="text-[10px] text-on-surface-variant">Analytics & reports</span>
+                        <button type="button" onclick="window.closeMasterSearchDropdown(); navigateTo('analytics');" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container transition-colors text-left text-xs font-medium text-on-surface group">
+                            <div class="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <span class="material-symbols-outlined text-[18px]">monitoring</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-on-surface text-xs truncate">Financial Intelligence</div>
+                                <div class="text-[11px] text-on-surface-variant truncate">Spending trends, category charts & reports</div>
+                            </div>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant/40 flex-shrink-0 group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                         </button>
                     </div>
                 `;
@@ -7710,7 +7762,11 @@
                 upiStatusPollInterval = null;
             }
 
-            if (typeof closeMobileSidebar === 'function') closeMobileSidebar();
+            if (typeof window.closeMobileSidebar === 'function') {
+                window.closeMobileSidebar();
+            } else if (typeof closeMobileSidebar === 'function') {
+                closeMobileSidebar();
+            }
 
             document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-item').forEach(el => {
@@ -11610,22 +11666,35 @@
             }
         }
 
-        function toggleMobileSidebar() {
+        function toggleMobileSidebar(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (typeof window.toggleMobileSidebar === 'function') {
+                return window.toggleMobileSidebar(e);
+            }
             document.body.classList.toggle('mobile-sidebar-open');
-            const backdrop = document.getElementById('mobileSidebarBackdrop');
             const isOpen = document.body.classList.contains('mobile-sidebar-open');
+            const backdrop = document.getElementById('mobileSidebarBackdrop');
             if (backdrop) backdrop.classList.toggle('hidden', !isOpen);
         }
 
-        function closeMobileSidebar() {
+        function closeMobileSidebar(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (typeof window.closeMobileSidebar === 'function') {
+                return window.closeMobileSidebar(e);
+            }
             document.body.classList.remove('mobile-sidebar-open');
             const backdrop = document.getElementById('mobileSidebarBackdrop');
             if (backdrop) backdrop.classList.add('hidden');
         }
 
-        function handleMenuClick() {
+        function handleMenuClick(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
             if (window.innerWidth < 1024) {
-                toggleMobileSidebar();
+                if (typeof window.toggleMobileSidebar === 'function') {
+                    window.toggleMobileSidebar(e);
+                } else {
+                    toggleMobileSidebar(e);
+                }
             } else {
                 toggleSidebarCollapse();
             }
@@ -12950,19 +13019,44 @@
         });
 
         // Mobile Sidebar Controls
-        window.openMobileSidebar = function() {
-            const sb = document.getElementById('appSidebar');
+        window.openMobileSidebar = function(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            document.body.classList.add('mobile-sidebar-open');
             const bd = document.getElementById('mobileSidebarBackdrop');
-            if (sb) sb.classList.remove('-translate-x-full');
             if (bd) bd.classList.remove('hidden');
+            const sb = document.getElementById('appSidebar');
+            if (sb) sb.classList.remove('-translate-x-full');
         };
 
-        window.closeMobileSidebar = function() {
-            const sb = document.getElementById('appSidebar');
+        window.closeMobileSidebar = function(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            document.body.classList.remove('mobile-sidebar-open');
             const bd = document.getElementById('mobileSidebarBackdrop');
-            if (sb) sb.classList.add('-translate-x-full');
             if (bd) bd.classList.add('hidden');
+            const sb = document.getElementById('appSidebar');
+            if (sb) sb.classList.add('-translate-x-full');
         };
+
+        window.toggleMobileSidebar = function(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (document.body.classList.contains('mobile-sidebar-open')) {
+                window.closeMobileSidebar(e);
+            } else {
+                window.openMobileSidebar(e);
+            }
+        };
+
+        // Keyboard Shortcut: Escape to close open mobile sidebar or search dropdown
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (document.body.classList.contains('mobile-sidebar-open')) {
+                    window.closeMobileSidebar(e);
+                }
+                if (typeof window.closeMasterSearchDropdown === 'function') {
+                    window.closeMasterSearchDropdown();
+                }
+            }
+        });
 
         // --- 2. GLOBAL CLIENT ERROR INGESTION ---
         window.onerror = function(message, source, lineno, colno, error) {
