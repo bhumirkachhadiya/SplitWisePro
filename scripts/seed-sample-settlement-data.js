@@ -88,15 +88,29 @@ async function seedDualSettlementData() {
             console.log(`✓ Existing group: Goa Vacation Trip (ID: ${groupId})`);
         }
 
-        // Add all members to group
+        // Add all members to group with editor/admin role
         const allMembers = [charlie.id, amit.id, priya.id, karan.id, rahul.id];
         for (const uid of allMembers) {
             await client.query(`
                 INSERT INTO public.group_members (group_id, user_id, role)
                 VALUES ($1, $2, $3)
-                ON CONFLICT (group_id, user_id) DO NOTHING
-            `, [groupId, uid, uid === charlie.id ? 'admin' : 'member']);
+                ON CONFLICT (group_id, user_id) DO UPDATE SET role = EXCLUDED.role
+            `, [groupId, uid, uid === charlie.id ? 'admin' : 'editor']);
         }
+
+        // Establish mutual friendships between all members
+        for (let i = 0; i < allMembers.length; i++) {
+            for (let j = 0; j < allMembers.length; j++) {
+                if (i === j) continue;
+                await client.query(`
+                    INSERT INTO public.friends (user_id, friend_id, created_at)
+                    VALUES ($1, $2, NOW())
+                    ON CONFLICT (user_id, friend_id) DO NOTHING
+                `, [allMembers[i], allMembers[j]]);
+            }
+        }
+        await client.query(`UPDATE public.friend_requests SET status = 'ACCEPTED' WHERE status = 'PENDING'`);
+        console.log('✓ All 5 members connected as mutual friends & group editors.');
 
         // Clean up any old sample expenses with matching descriptions to make re-seeding completely clean
         const sampleDescriptions = [

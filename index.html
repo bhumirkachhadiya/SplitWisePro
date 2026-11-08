@@ -9833,14 +9833,18 @@
             }
 
             try {
+                const sessionToken = window.__splitwiseGetToken ? window.__splitwiseGetToken() : '';
+                const reqHeaders = { 'Content-Type': 'application/json' };
+                if (sessionToken) reqHeaders['Authorization'] = `Bearer ${sessionToken}`;
+
                 const res = await fetch(`${API}/expenses`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: reqHeaders,
                     body: JSON.stringify({
                         group_id,
                         paid_by,
                         payers: payersPayload,
-                        created_by: currentUser.id,
+                        created_by: (currentUser && currentUser.id) ? currentUser.id : undefined,
                         amount,
                         description,
                         category,
@@ -9851,11 +9855,24 @@
                     })
                 });
 
-                const data = await res.json();
+                let data = null;
+                try {
+                    data = await res.json();
+                } catch (parseErr) {
+                    data = { error: `Server error (${res.status}): ${res.statusText || 'Non-JSON response'}` };
+                }
 
-                if (res.ok) {
+                if (!res.ok) {
+                    const serverMsg = (data && data.error) ? data.error : `Server error (${res.status})`;
+                    showAddExpenseValidationAlert(sanitizeMessage(serverMsg));
+                    showToast(sanitizeMessage(serverMsg), 'error');
+                    return;
+                }
+
+                // Expense saved successfully on server
+                try {
                     if (window.confetti) confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
-                    const group = allGroups.find(g => g.id === group_id);
+                    const group = (allGroups || []).find(g => g.id === group_id);
                     if (successAlert) {
                         successAlert.classList.remove('hidden');
                         document.getElementById('addExpenseSuccessMsg').innerText = `✓ Expense "${description}" (₹${amount.toLocaleString('en-IN')}) successfully recorded in ${group ? group.name : 'group'}!`;
@@ -9870,13 +9887,17 @@
                     setMultiPayerMode(false);
                     document.getElementById('newExpenseDate').value = new Date().toISOString().split('T')[0];
                     await refreshAllData();
-                } else {
-                    showAddExpenseValidationAlert(sanitizeMessage(data.error || 'Failed to record expense'));
-                    showToast(sanitizeMessage(data.error || 'Validation error'), 'error');
+                } catch (postSaveErr) {
+                    console.warn('Expense recorded successfully, post-save UI refresh notice:', postSaveErr);
                 }
             } catch(e) {
-                showAddExpenseValidationAlert('Connection error while saving expense.');
-                showToast('Connection error', 'error');
+                console.error('Error in handleCreateExpense:', e);
+                const isNetworkFailure = (e instanceof TypeError && /fetch|network|failed/i.test(e.message));
+                const errMsg = isNetworkFailure
+                    ? 'Connection error while saving expense. Please verify the server is running and try again.'
+                    : `Error saving expense: ${e && e.message ? e.message : 'Unknown error'}`;
+                showAddExpenseValidationAlert(errMsg);
+                showToast('Failed to save expense', 'error');
             } finally {
                 ButtonLoader.setLoading(submitBtn, false);
             }
