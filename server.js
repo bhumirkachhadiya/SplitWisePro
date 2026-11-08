@@ -73,7 +73,56 @@ const PUBLIC_ASSET_ROUTES = {
 Object.entries(PUBLIC_ASSET_ROUTES).forEach(([route, file]) => {
     app.get(route, (req, res) => res.sendFile(path.join(__dirname, file)));
 });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Helper to save uploaded media persistently in both disk and PostgreSQL
+async function savePersistentFile(relativePath, buffer, mimeType) {
+    try {
+        const fullDiskPath = path.join(__dirname, relativePath.replace(/^\//, ''));
+        const dir = path.dirname(fullDiskPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(fullDiskPath, buffer);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS persistent_media (
+                file_path TEXT PRIMARY KEY,
+                mime_type TEXT NOT NULL,
+                data BYTEA NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+        await pool.query(`
+            INSERT INTO persistent_media (file_path, mime_type, data)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (file_path) DO UPDATE SET data = EXCLUDED.data, mime_type = EXCLUDED.mime_type, created_at = NOW()
+        `, [relativePath, mimeType || 'image/png', buffer]);
+    } catch (err) {
+        console.error('Error saving persistent file:', err);
+    }
+}
+
+// Persistent DB-backed file serving for Render ephemeral filesystem
+app.use('/uploads', async (req, res, next) => {
+    const localFilePath = path.join(__dirname, 'uploads', req.path);
+    if (fs.existsSync(localFilePath) && fs.statSync(localFilePath).isFile()) {
+        return res.sendFile(localFilePath);
+    }
+    try {
+        const fullPath = `/uploads${req.path}`;
+        const dbRes = await pool.query('SELECT mime_type, data FROM persistent_media WHERE file_path = $1', [fullPath]);
+        if (dbRes.rows.length > 0) {
+            const { mime_type, data } = dbRes.rows[0];
+            try {
+                const dir = path.dirname(localFilePath);
+                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(localFilePath, data);
+            } catch (_) {}
+            res.setHeader('Content-Type', mime_type || 'image/png');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(data);
+        }
+    } catch (_) {}
+    return res.status(404).send('Not Found');
+});
 app.get('/robots.txt', (req, res) => {
     res.type('text/plain').send('User-agent: *\nDisallow: /api/\n');
 });
@@ -1746,10 +1795,8 @@ app.post('/api/users/profile/picture', async (req, res) => {
                 return res.status(400).json({ error: 'Profile picture must not exceed 5 MB.' });
             }
             const filename = `avatar_${userId}_${Date.now()}.${ext}`;
-            const uploadDir = path.join(__dirname, 'uploads', 'avatars');
-            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-            fs.writeFileSync(path.join(uploadDir, filename), buffer);
             finalUrl = `/uploads/avatars/${filename}`;
+            await savePersistentFile(finalUrl, buffer, `image/${ext}`);
         } else if (avatar_url && typeof avatar_url === 'string' && /^https?:\/\//i.test(avatar_url.trim())) {
             finalUrl = avatar_url.trim();
         } else {
@@ -3269,8 +3316,8 @@ app.post('/api/groups/:id/media', async (req, res) => {
                     const buf = Buffer.from(matches[2], 'base64');
                     if (buf.length <= 10 * 1024 * 1024) {
                         const filename = `group_cover_${groupId}_${Date.now()}.${ext}`;
-                        fs.writeFileSync(path.join(uploadDir, filename), buf);
                         finalCover = `/uploads/groups/${filename}`;
+                        await savePersistentFile(finalCover, buf, `image/${ext}`);
                     }
                 }
             }
@@ -3289,8 +3336,8 @@ app.post('/api/groups/:id/media', async (req, res) => {
                     const buf = Buffer.from(matches[2], 'base64');
                     if (buf.length <= 10 * 1024 * 1024) {
                         const filename = `group_icon_${groupId}_${Date.now()}.${ext}`;
-                        fs.writeFileSync(path.join(uploadDir, filename), buf);
                         finalIcon = `/uploads/groups/${filename}`;
+                        await savePersistentFile(finalIcon, buf, `image/${ext}`);
                     }
                 }
             }
