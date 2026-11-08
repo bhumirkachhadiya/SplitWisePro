@@ -16479,6 +16479,11 @@
         // --- 2. GLOBAL CLIENT ERROR INGESTION ---
         window.onerror = function(message, source, lineno, colno, error) {
             try {
+                const msg = String(message || '');
+                const src = String(source || '');
+                if (src.includes('chrome-extension://') || src.includes('moz-extension://') || src.includes('safari-extension://') || msg.includes('message channel closed') || msg.includes('ResizeObserver')) {
+                    return;
+                }
                 fetch('/api/admin/errors/report', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -16500,6 +16505,18 @@
         window.onunhandledrejection = function(event) {
             try {
                 const reason = event.reason || {};
+                const msg = String(reason.message || reason || '');
+                const stack = String(reason.stack || '');
+                // Suppress browser extension message port lifecycle errors & resize observer noise
+                if (msg.includes('message channel closed') || 
+                    msg.includes('asynchronous response') || 
+                    msg.includes('ResizeObserver') ||
+                    stack.includes('chrome-extension://') || 
+                    stack.includes('moz-extension://')) {
+                    if (typeof event.preventDefault === 'function') event.preventDefault();
+                    return;
+                }
+
                 fetch('/api/admin/errors/report', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
