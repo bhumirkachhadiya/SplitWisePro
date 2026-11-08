@@ -7635,12 +7635,53 @@ async function getAuthUser(req, res) {
         res.status(401).json({ error: 'Authentication required. Please sign in to access Chat.' });
         return null;
     }
-    const check = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [userId]);
+    const check = await pool.query('SELECT id, name, email, role, avatar_initials, avatar_url FROM users WHERE id = $1', [userId]);
     if (check.rows.length === 0) {
         res.status(401).json({ error: 'Invalid user session. Please sign in again.' });
         return null;
     }
     return check.rows[0];
+}
+
+// Verify conversation membership and auto-heal enrollment for group circle chats
+async function verifyConversationAccess(convId, userId, userRole) {
+    if (!convId || isNaN(convId)) {
+        return { error: 'Invalid conversation ID.', status: 400 };
+    }
+    const convRes = await pool.query('SELECT * FROM chat_conversations WHERE id = $1', [convId]);
+    if (convRes.rows.length === 0) {
+        return { error: 'Conversation not found or has been closed.', status: 404, code: 'CONVERSATION_NOT_FOUND' };
+    }
+    const conv = convRes.rows[0];
+
+    const memberCheck = await pool.query(`
+        SELECT 1 FROM chat_conversation_members 
+        WHERE conversation_id = $1 AND user_id = $2
+    `, [convId, userId]);
+
+    if (memberCheck.rows.length > 0) {
+        return { conversation: conv };
+    }
+
+    // Auto-heal / enroll if it is a circle conversation and the user belongs to that circle
+    if (conv.group_id) {
+        const grpCheck = await pool.query(
+            'SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2',
+            [conv.group_id, userId]
+        );
+        if (grpCheck.rows.length > 0 || userRole === 'master_admin') {
+            await pool.query(`
+                INSERT INTO chat_conversation_members (conversation_id, user_id)
+                VALUES ($1, $2)
+                ON CONFLICT (conversation_id, user_id) DO NOTHING
+            `, [convId, userId]);
+            return { conversation: conv };
+        }
+    } else if (userRole === 'master_admin') {
+        return { conversation: conv };
+    }
+
+    return { error: 'Access denied: You are not an enrolled member of this conversation.', status: 403, code: 'FORBIDDEN' };
 }
 
 // 1. List user's conversations (Auto-syncs all groups where the user exists)
@@ -7937,18 +7978,9 @@ app.get('/api/chat/conversations/:id/messages', async (req, res) => {
         if (!user) return;
 
         const convId = parseInt(req.params.id);
-        if (!convId || isNaN(convId)) {
-            return res.status(400).json({ error: 'Invalid conversation ID.' });
-        }
-
-        // Verify membership
-        const memberCheck = await pool.query(`
-            SELECT 1 FROM chat_conversation_members 
-            WHERE conversation_id = $1 AND user_id = $2
-        `, [convId, user.id]);
-
-        if (memberCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'Access denied: You are not a member of this conversation.' });
+        const access = await verifyConversationAccess(convId, user.id, user.role);
+        if (access.error) {
+            return res.status(access.status).json({ error: access.error, code: access.code });
         }
 
         // Fetch messages with rich media and receipt timestamps
@@ -7996,8 +8028,9 @@ app.post('/api/chat/conversations/:id/read', async (req, res) => {
         if (!user) return;
 
         const convId = parseInt(req.params.id);
-        if (!convId || isNaN(convId)) {
-            return res.status(400).json({ error: 'Invalid conversation ID.' });
+        const access = await verifyConversationAccess(convId, user.id, user.role);
+        if (access.error) {
+            return res.status(access.status).json({ error: access.error, code: access.code });
         }
 
         await pool.query(`
@@ -8020,17 +8053,9 @@ app.post('/api/chat/conversations/:id/attachment', async (req, res) => {
         if (!user) return;
 
         const convId = parseInt(req.params.id);
-        if (!convId || isNaN(convId)) {
-            return res.status(400).json({ error: 'Invalid conversation ID.' });
-        }
-
-        // Verify membership
-        const memberCheck = await pool.query(`
-            SELECT 1 FROM chat_conversation_members 
-            WHERE conversation_id = $1 AND user_id = $2
-        `, [convId, user.id]);
-        if (memberCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'Access denied: You cannot upload files to this conversation.' });
+        const access = await verifyConversationAccess(convId, user.id, user.role);
+        if (access.error) {
+            return res.status(access.status).json({ error: access.error, code: access.code });
         }
 
         const { file_data, file_name, file_type } = req.body;
@@ -8086,21 +8111,13 @@ app.post('/api/chat/conversations/:id/messages', async (req, res) => {
         const convId = parseInt(req.params.id);
         const { message, message_type = 'text', media_url = null, file_name = null, file_size = null } = req.body;
 
-        if (!convId || isNaN(convId)) {
-            return res.status(400).json({ error: 'Invalid conversation ID.' });
-        }
         if ((!message || !message.trim()) && !media_url) {
             return res.status(400).json({ error: 'Message content or media attachment cannot be empty.' });
         }
 
-        // Verify membership
-        const memberCheck = await pool.query(`
-            SELECT 1 FROM chat_conversation_members 
-            WHERE conversation_id = $1 AND user_id = $2
-        `, [convId, user.id]);
-
-        if (memberCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'Access denied: You cannot send messages to conversations you do not belong to.' });
+        const access = await verifyConversationAccess(convId, user.id, user.role);
+        if (access.error) {
+            return res.status(access.status).json({ error: access.error, code: access.code });
         }
 
         const cleanMessage = (message || file_name || `[${message_type.toUpperCase()}]`).trim().substring(0, 2000);

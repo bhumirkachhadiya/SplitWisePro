@@ -2471,43 +2471,76 @@
                     <!-- Populated dynamically -->
                 </div>
 
-                <!-- Emoji & Sticker Drawer Popover -->
-                <div id="chatEmojiPickerPopover" class="hidden absolute bottom-20 left-4 right-4 sm:right-auto sm:w-80 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant shadow-xl rounded-2xl p-3 z-30 space-y-2">
-                    <div class="flex items-center justify-between border-b border-outline-variant/40 pb-1.5 text-xs">
-                        <span class="font-bold text-on-surface flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[16px] text-primary">mood</span>
-                            <span>Emojis & Stickers</span>
-                        </span>
-                        <button type="button" onclick="toggleChatEmojiPicker(false)" class="text-on-surface-variant hover:text-on-surface">
+                <!-- Emoji & Sticker Drawer Popover (WhatsApp / Instagram style) -->
+                <div id="chatEmojiPickerPopover" class="hidden absolute bottom-20 left-4 right-4 sm:right-auto sm:w-96 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant shadow-2xl rounded-2xl p-3 z-30 space-y-2.5">
+                    <div class="flex items-center justify-between border-b border-outline-variant/40 pb-2">
+                        <!-- Drawer Tabs: Emojis vs Stickers -->
+                        <div class="flex items-center gap-1 bg-surface-container-high rounded-xl p-0.5">
+                            <button type="button" id="chatDrawerTabEmojis" onclick="switchChatDrawerTab('emojis')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-white shadow-xs transition-all flex items-center gap-1">
+                                <span>😀</span>
+                                <span>Emojis</span>
+                            </button>
+                            <button type="button" id="chatDrawerTabStickers" onclick="switchChatDrawerTab('stickers')" class="px-2.5 py-1 rounded-lg text-xs font-bold text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-1">
+                                <span>🏷️</span>
+                                <span>Stickers</span>
+                            </button>
+                        </div>
+                        <button type="button" onclick="toggleChatEmojiPicker(false)" class="text-on-surface-variant hover:text-on-surface p-1 rounded-lg">
                             <span class="material-symbols-outlined text-[16px]">close</span>
                         </button>
                     </div>
-                    <div class="grid grid-cols-8 gap-1.5 text-lg p-1 max-h-36 overflow-y-auto" id="chatEmojiGrid">
-                        <!-- Populated by JS -->
+
+                    <!-- Emojis View -->
+                    <div id="chatEmojiViewContainer" class="space-y-2">
+                        <!-- Emoji Search & Category Chips -->
+                        <input id="chatEmojiSearchInput" type="text" placeholder="Search emojis (smile, money, food, car)..." oninput="filterChatEmojis(this.value)" class="qw-input text-[11px] py-1 px-2.5 w-full"/>
+                        <div class="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] no-scrollbar" id="chatEmojiCategoryChips">
+                            <!-- Category chips rendered by JS -->
+                        </div>
+                        <div class="grid grid-cols-8 gap-1 text-xl p-1 max-h-44 overflow-y-auto no-scrollbar" id="chatEmojiGrid">
+                            <!-- Populated dynamically -->
+                        </div>
                     </div>
-                    <div class="pt-2 border-t border-outline-variant/40">
-                        <span class="text-[10px] uppercase font-bold text-on-surface-variant block mb-1.5">Quick Expense Stickers</span>
-                        <div class="flex flex-wrap gap-1.5" id="chatStickersRow">
-                            <button type="button" onclick="sendChatSticker('💸 Paid in Full')" class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-500/20 hover:scale-105 transition-transform">💸 Paid in Full</button>
-                            <button type="button" onclick="sendChatSticker('🧾 Please Settle')" class="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-bold border border-amber-500/20 hover:scale-105 transition-transform">🧾 Please Settle</button>
-                            <button type="button" onclick="sendChatSticker('👍 Approved')" class="px-2 py-1 rounded-lg bg-primary/10 text-primary text-[11px] font-bold border border-primary/20 hover:scale-105 transition-transform">👍 Approved</button>
-                            <button type="button" onclick="sendChatSticker('🍕 Dinner Expense')" class="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[11px] font-bold border border-purple-500/20 hover:scale-105 transition-transform">🍕 Dinner</button>
+
+                    <!-- Stickers View (WhatsApp & Insta Style) -->
+                    <div id="chatStickersViewContainer" class="hidden space-y-2">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-[10px] uppercase font-bold text-on-surface-variant">Tap sticker to send instantly</span>
+                            <div class="flex items-center gap-1" id="chatStickerCategoryPills">
+                                <button type="button" onclick="filterChatStickers('all')" class="sticker-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-white">All</button>
+                                <button type="button" onclick="filterChatStickers('finance')" class="sticker-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-on-surface-variant">Finance</button>
+                                <button type="button" onclick="filterChatStickers('vibes')" class="sticker-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-on-surface-variant">Vibes</button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 max-h-52 overflow-y-auto p-1" id="chatStickersGrid">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
 
-                <!-- GIF Picker Popover -->
-                <div id="chatGifPickerPopover" class="hidden absolute bottom-20 left-4 right-4 sm:right-auto sm:w-80 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant shadow-xl rounded-2xl p-3 z-30 space-y-2">
-                    <div class="flex items-center justify-between border-b border-outline-variant/40 pb-1.5 text-xs">
+                <!-- GIF Picker Popover (Instagram / WhatsApp style) -->
+                <div id="chatGifPickerPopover" class="hidden absolute bottom-20 left-4 right-4 sm:right-auto sm:w-96 bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant shadow-2xl rounded-2xl p-3 z-30 space-y-2">
+                    <div class="flex items-center justify-between border-b border-outline-variant/40 pb-2 text-xs">
                         <span class="font-bold text-on-surface flex items-center gap-1">
                             <span class="material-symbols-outlined text-[16px] text-primary">gif</span>
-                            <span>Financial & Fun GIFs</span>
+                            <span>Reaction & Expense GIFs</span>
                         </span>
-                        <button type="button" onclick="toggleChatGifPicker(false)" class="text-on-surface-variant hover:text-on-surface">
+                        <button type="button" onclick="toggleChatGifPicker(false)" class="text-on-surface-variant hover:text-on-surface p-1 rounded-lg">
                             <span class="material-symbols-outlined text-[16px]">close</span>
                         </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto" id="chatGifsGrid">
+
+                    <!-- GIF Search & Category Chips -->
+                    <input id="chatGifSearchInput" type="text" placeholder="Search GIFs (money, thanks, math, dance, pizza)..." oninput="filterChatGifs(this.value)" class="qw-input text-[11px] py-1.5 px-2.5 w-full"/>
+                    <div class="flex items-center gap-1 overflow-x-auto pb-1 text-[11px] no-scrollbar" id="chatGifCategoryPills">
+                        <button type="button" onclick="filterChatGifsByCategory('all')" class="gif-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-white">All</button>
+                        <button type="button" onclick="filterChatGifsByCategory('money')" class="gif-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-on-surface-variant">💸 Money</button>
+                        <button type="button" onclick="filterChatGifsByCategory('reactions')" class="gif-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-on-surface-variant">🎉 Reactions</button>
+                        <button type="button" onclick="filterChatGifsByCategory('food')" class="gif-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-on-surface-variant">🍕 Food</button>
+                        <button type="button" onclick="filterChatGifsByCategory('travel')" class="gif-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container text-on-surface-variant">✈️ Trips</button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1" id="chatGifsGrid">
                         <!-- Populated by JS -->
                     </div>
                 </div>
@@ -13750,6 +13783,15 @@
         let activeConversations = [];
         let chatPollingTimer = null;
 
+        function getChatHeaders(contentType = 'application/json') {
+            const sessionToken = window.__splitwiseGetToken ? window.__splitwiseGetToken() : '';
+            const h = {};
+            if (contentType) h['Content-Type'] = contentType;
+            if (currentUser?.id) h['x-user-id'] = String(currentUser.id);
+            if (sessionToken) h['Authorization'] = `Bearer ${sessionToken}`;
+            return h;
+        }
+
         function escapeChatHtml(str) {
             if (!str) return '';
             return String(str)
@@ -13768,7 +13810,7 @@
             }
             try {
                 const res = await fetch(`${API}/chat/unread-count`, {
-                    headers: { 'x-user-id': String(currentUser.id) }
+                    headers: getChatHeaders(null)
                 });
                 if (!res.ok) return;
                 const data = await res.json();
@@ -13869,9 +13911,14 @@
                 `;
             }).join('');
 
-            // Auto-select first conversation only if none currently active
-            if (filteredConversations.length > 0 && !currentActiveConversationId) {
-                selectConversation(filteredConversations[0].id);
+            // Auto-select valid conversation or heal stale selection
+            if (filteredConversations.length > 0) {
+                const isCurrentValid = currentActiveConversationId && activeConversations.some(c => c.id === currentActiveConversationId);
+                if (!isCurrentValid) {
+                    selectConversation(filteredConversations[0].id);
+                }
+            } else {
+                currentActiveConversationId = null;
             }
         }
 
@@ -13886,7 +13933,7 @@
 
             try {
                 const res = await fetch(`${API}/chat/conversations`, {
-                    headers: { 'x-user-id': String(currentUser.id) }
+                    headers: getChatHeaders(null)
                 });
                 if (!res.ok) {
                     container.innerHTML = `<div class="p-4 text-xs text-on-surface-variant text-center">Unable to load conversations</div>`;
@@ -13977,7 +14024,7 @@
             try {
                 startGlobalLoading();
                 const res = await fetch(`${API}/chat/direct/${friendId}`, {
-                    headers: { 'x-user-id': String(currentUser.id) }
+                    headers: getChatHeaders(null)
                 });
                 if (!res.ok) {
                     const err = await res.json();
@@ -14032,7 +14079,7 @@
             try {
                 await fetch(`${API}/chat/conversations/${convId}/read`, {
                     method: 'POST',
-                    headers: { 'x-user-id': String(currentUser.id) }
+                    headers: getChatHeaders()
                 });
             } catch (err) {
                 console.error('Error marking conversation read:', err);
@@ -14083,11 +14130,15 @@
 
             try {
                 const res = await fetch(`${API}/chat/conversations/${convId}/messages`, {
-                    headers: { 'x-user-id': String(currentUser.id) }
+                    headers: getChatHeaders(null)
                 });
                 if (!res.ok) {
-                    if (res.status === 403) {
-                        msgArea.innerHTML = `<div class="p-6 text-center text-xs text-error font-semibold">Access Denied: You are not an enrolled member of this conversation.</div>`;
+                    if (res.status === 404 || res.status === 403) {
+                        msgArea.innerHTML = `<div class="p-6 text-center text-xs text-error font-semibold">${res.status === 404 ? 'This conversation is no longer active or was removed.' : 'Access Denied: You are not an enrolled member of this conversation.'}</div>`;
+                        if (currentActiveConversationId === convId) {
+                            currentActiveConversationId = null;
+                            setTimeout(() => { loadChatConversations(); }, 1200);
+                        }
                     } else {
                         msgArea.innerHTML = `<div class="p-6 text-center text-xs text-on-surface-variant">Unable to load messages.</div>`;
                     }
@@ -14233,10 +14284,7 @@
             try {
                 const res = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-user-id': String(currentUser.id)
-                    },
+                    headers: getChatHeaders(),
                     body: JSON.stringify({ message })
                 });
 
@@ -14244,8 +14292,14 @@
                 if (pendingEl) pendingEl.remove();
 
                 if (!res.ok) {
-                    const err = await res.json();
-                    showToast(err.error || 'Failed to send message', 'error');
+                    const err = await res.json().catch(() => ({}));
+                    if (res.status === 404 || res.status === 403) {
+                        showToast(err.error || 'Conversation unavailable. Refreshing...', 'error');
+                        currentActiveConversationId = null;
+                        await loadChatConversations();
+                    } else {
+                        showToast(err.error || 'Failed to send message', 'error');
+                    }
                     return;
                 }
 
@@ -14281,10 +14335,7 @@
                 try {
                     const uploadRes = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/attachment`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-user-id': String(currentUser.id)
-                        },
+                        headers: getChatHeaders(),
                         body: JSON.stringify({
                             file_data: evt.target.result,
                             file_name: file.name,
@@ -14300,10 +14351,7 @@
                     // Send message referencing the attachment
                     const sendRes = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-user-id': String(currentUser.id)
-                        },
+                        headers: getChatHeaders(),
                         body: JSON.stringify({
                             message: file.name,
                             message_type: uploadData.message_type || 'document',
@@ -14331,15 +14379,159 @@
             reader.readAsDataURL(file);
         }
 
-        const CHAT_EMOJIS = ['😊', '😂', '🔥', '👍', '❤️', '🎉', '💸', '💰', '💳', '🍕', '☕', '🚗', '✈️', '🏠', '🛒', '⚡', '🙌', '🤝', '💯', '✨', '🙏', '🧾', '📊', '✅'];
-        const CHAT_GIFS = [
-            { title: 'Money Flow', url: 'https://media.giphy.com/media/l0Ex6kAKAoFRsFhIE/giphy.gif' },
-            { title: 'Calculating', url: 'https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif' },
-            { title: 'Deal Done', url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif' },
-            { title: 'Celebrate', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
-            { title: 'Thank You', url: 'https://media.giphy.com/media/3oEdva9BUHPI92Ty4o/giphy.gif' },
-            { title: 'Expense Shock', url: 'https://media.giphy.com/media/26ueYUlPAmUkTBAM8/giphy.gif' }
+        // -------------------------------------------------------------
+        // STANDARD EMOJI, STICKER & GIF MARKET LIBRARY (WhatsApp & Insta Style)
+        // -------------------------------------------------------------
+        const CHAT_EMOJI_CATEGORIES = [
+            {
+                id: 'all',
+                name: 'All',
+                icon: 'star',
+                emojis: [
+                    '😀', '😂', '🤣', '😍', '🥰', '😎', '🥳', '😭', '😱', '🤯',
+                    '👍', '👎', '🙌', '👏', '🙏', '🤝', '❤️', '🔥', '✨', '💯',
+                    '💸', '💰', '🪙', '💵', '💳', '🧾', '🏦', '📈', '📊', '🤑',
+                    '🍕', '🍔', '🍟', '🌮', '🍣', '🍰', '🎂', '☕', '🧋', '🍺',
+                    '✈️', '🚗', '🚕', '🏖️', '🏨', '🎉', '🎁', '🔔', '✅', '⚡'
+                ]
+            },
+            {
+                id: 'smileys',
+                name: 'Smileys',
+                icon: 'mood',
+                emojis: [
+                    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
+                    '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜',
+                    '🤪', '🤓', '😎', '🥳', '🥺', '😭', '😱', '🤯', '😴', '🤤',
+                    '👍', '👎', '🙌', '👏', '🙏', '🤝', '✌️', '❤️', '💔', '💖',
+                    '✨', '💯', '🔥'
+                ]
+            },
+            {
+                id: 'money',
+                name: 'Money',
+                icon: 'payments',
+                emojis: [
+                    '💸', '💰', '🪙', '💵', '💴', '💶', '💷', '💳', '🧾', '🏦',
+                    '📈', '📉', '🏧', '🤑', '💎', '🎁', '⚖️', '🏷️', '💼', '📊'
+                ]
+            },
+            {
+                id: 'food',
+                name: 'Food',
+                icon: 'restaurant',
+                emojis: [
+                    '🍕', '🍔', '🍟', '🌭', '🍿', '🧂', '🥓', '🥞', '🌮', '🌯',
+                    '🥗', '🥪', '🍣', '🍜', '🍲', '🥟', '🧁', '🍰', '🎂', '🍩',
+                    '🍪', '☕', '🧋', '🍵', '🍺', '🍻', '🥂', '🍷', '🍾'
+                ]
+            },
+            {
+                id: 'travel',
+                name: 'Travel',
+                icon: 'flight',
+                emojis: [
+                    '✈️', '🛫', '🛬', '🚗', '🚕', '🚙', '🚌', '🏎️', '🛵', '🏍️',
+                    '🚲', '🛴', '🏖️', '🏕️', '🏨', '🌴', '🗺️', '⛽', '🧳', '🚂'
+                ]
+            },
+            {
+                id: 'badges',
+                name: 'Badges',
+                icon: 'military_tech',
+                emojis: [
+                    '🎉', '🎊', '🎈', '🏆', '🥇', '🥈', '🥉', '⚽', '🎮', '🎬',
+                    '🎵', '📢', '🔔', '⏳', '⏱️', '✅', '❌', '⚠️', '❓', '💡',
+                    '🎯', '🚀'
+                ]
+            }
         ];
+
+        const CHAT_STICKER_LIBRARY = [
+            // Settlements & Finance
+            { category: 'finance', text: '💸 Paid in Full', label: 'Paid in Full', icon: 'payments', bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+            { category: 'finance', text: '🧾 Please Settle Up', label: 'Please Settle', icon: 'receipt_long', bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' },
+            { category: 'finance', text: '⏳ Pending Approval', label: 'Pending Approval', icon: 'hourglass_top', bg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' },
+            { category: 'finance', text: '🤝 Debt Cleared!', label: 'Debt Cleared!', icon: 'handshake', bg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
+            { category: 'finance', text: '🏦 UPI Payment Sent', label: 'UPI Sent', icon: 'account_balance', bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' },
+            { category: 'finance', text: '💰 Cash Handed Over', label: 'Cash Given', icon: 'attach_money', bg: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20' },
+            { category: 'finance', text: '📊 Split 50 / 50', label: 'Split 50 / 50', icon: 'pie_chart', bg: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' },
+            { category: 'finance', text: '🔔 Gentle Reminder', label: 'Gentle Reminder', icon: 'notifications_active', bg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' },
+            { category: 'finance', text: '🙏 Thank You!', label: 'Thank You!', icon: 'favorite', bg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' },
+            { category: 'finance', text: '⚡ Instant Settle', label: 'Instant Settle', icon: 'bolt', bg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' },
+
+            // Vibes & Hangouts (Instagram Chat Style)
+            { category: 'vibes', text: '🍕 Foodie Split', label: 'Foodie Split', icon: 'local_pizza', bg: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' },
+            { category: 'vibes', text: '☕ Coffee\'s on Me', label: 'Coffee\'s on Me', icon: 'coffee', bg: 'bg-amber-600/10 text-amber-700 dark:text-amber-300 border-amber-600/20' },
+            { category: 'vibes', text: '🚗 Road Trip Vibes', label: 'Road Trip', icon: 'directions_car', bg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20' },
+            { category: 'vibes', text: '✈️ Vacation Budget', label: 'Vacation Budget', icon: 'flight_takeoff', bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20' },
+            { category: 'vibes', text: '🎉 Party Mode!', label: 'Party Mode!', icon: 'celebration', bg: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-500/20' },
+            { category: 'vibes', text: '💯 100% Agreed', label: '100% Agreed', icon: 'check_circle', bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' },
+            { category: 'vibes', text: '🔥 Super Lit!', label: 'Super Lit!', icon: 'local_fire_department', bg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' },
+            { category: 'vibes', text: '👀 Checking the Bill', label: 'Checking Bill', icon: 'visibility', bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' },
+            { category: 'vibes', text: '🍻 Round of Drinks', label: 'Round of Drinks', icon: 'sports_bar', bg: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 border-yellow-600/20' },
+            { category: 'vibes', text: '🛒 Grocery Haul', label: 'Grocery Haul', icon: 'shopping_cart', bg: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' },
+            { category: 'vibes', text: '🎬 Movie Night Out', label: 'Movie Night', icon: 'movie', bg: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' },
+            { category: 'vibes', text: '🎂 Birthday Treat', label: 'Birthday Treat', icon: 'cake', bg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20' }
+        ];
+
+        const CHAT_GIF_LIBRARY = [
+            // Money & Expenses
+            { category: 'money', title: 'Make It Rain', keywords: 'money cash rich rain pay rich bills', url: 'https://media.giphy.com/media/l0Ex6kAKAoFRsFhIE/giphy.gif' },
+            { category: 'money', title: 'Counting Cash', keywords: 'counting dollars bills finance rich stack', url: 'https://media.giphy.com/media/67ThRZlYBvibtdF9UC/giphy.gif' },
+            { category: 'money', title: 'Take My Money', keywords: 'shut up take money pay buy fry futurama', url: 'https://media.giphy.com/media/3oKIPa2TdahY8LAAxy/giphy.gif' },
+            { category: 'money', title: 'Calculating Math', keywords: 'calculate math numbers count bill split', url: 'https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif' },
+            { category: 'money', title: 'Broke / Empty', keywords: 'broke poor no money empty pockets tumbleweed zero', url: 'https://media.giphy.com/media/ZGH8VtTZ07QvOX72OD/giphy.gif' },
+            { category: 'money', title: 'Expense Shock', keywords: 'shock surprise expensive high cost bill what', url: 'https://media.giphy.com/media/26ueYUlPAmUkTBAM8/giphy.gif' },
+
+            // Reactions & Celebration (Insta / WhatsApp top reactions)
+            { category: 'reactions', title: 'Celebrate Dance', keywords: 'celebrate happy dance party win success wow', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif' },
+            { category: 'reactions', title: 'Thumbs Up / Approved', keywords: 'deal done approved good thumbs up yes ok agreed', url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif' },
+            { category: 'reactions', title: 'Thank You', keywords: 'thank you thanks grateful appreciated love heart', url: 'https://media.giphy.com/media/3oEdva9BUHPI92Ty4o/giphy.gif' },
+            { category: 'reactions', title: 'High Five', keywords: 'high five team teamwork friend partner cheers', url: 'https://media.giphy.com/media/3oEjHV0z8S7WM4MwnK/giphy.gif' },
+            { category: 'reactions', title: 'Mind Blown', keywords: 'mind blown wow shock amazing explode galaxy', url: 'https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif' },
+            { category: 'reactions', title: 'Facepalm', keywords: 'facepalm fail oops mistake why smh', url: 'https://media.giphy.com/media/6yRVg0HWzgS88/giphy.gif' },
+            { category: 'reactions', title: 'Laughing Out Loud', keywords: 'laugh lol haha funny hilarious rofl', url: 'https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif' },
+            { category: 'reactions', title: 'Deal With It', keywords: 'deal with it sunglasses cool boss swag smooth', url: 'https://media.giphy.com/media/xUOxeW0L8af0BOCvT2/giphy.gif' },
+
+            // Food & Party
+            { category: 'food', title: 'Pizza Time', keywords: 'pizza food eat hungry dinner slice yummy cheese', url: 'https://media.giphy.com/media/1108D2tVaUN3eo/giphy.gif' },
+            { category: 'food', title: 'Cheers Drinks', keywords: 'cheers drink beer toast party alcohol pub bar', url: 'https://media.giphy.com/media/Zw3oBUuIg23Ls18pU2/giphy.gif' },
+            { category: 'food', title: 'Party Dancing', keywords: 'party dance club fun groove celebration weekend', url: 'https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif' },
+            { category: 'food', title: 'Coffee First', keywords: 'coffee morning cafe cup drink caffeine tired awake', url: 'https://media.giphy.com/media/3oriO04qxVReM5rJEA/giphy.gif' },
+
+            // Travel & Trips
+            { category: 'travel', title: 'Road Trip', keywords: 'road trip car drive vacation travel journey friends', url: 'https://media.giphy.com/media/xT5LMGfNmcljdACMGY/giphy.gif' },
+            { category: 'travel', title: 'Packing Bags', keywords: 'pack luggage suitcase airport vacation holiday fly', url: 'https://media.giphy.com/media/l0MYEqEzwMWFCg8rm/giphy.gif' },
+            { category: 'travel', title: 'Beach Vacation', keywords: 'beach sea sun summer ocean vacation chill holiday', url: 'https://media.giphy.com/media/l41JRsph73VokN6ik/giphy.gif' }
+        ];
+
+        let activeChatDrawerTab = 'emojis';
+        let activeEmojiCategory = 'all';
+        let activeStickerCategory = 'all';
+        let activeGifCategory = 'all';
+
+        function switchChatDrawerTab(tab) {
+            activeChatDrawerTab = tab;
+            const tabEmojis = document.getElementById('chatDrawerTabEmojis');
+            const tabStickers = document.getElementById('chatDrawerTabStickers');
+            const viewEmojis = document.getElementById('chatEmojiViewContainer');
+            const viewStickers = document.getElementById('chatStickersViewContainer');
+
+            if (tab === 'emojis') {
+                if (tabEmojis) tabEmojis.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-white shadow-xs transition-all flex items-center gap-1';
+                if (tabStickers) tabStickers.className = 'px-2.5 py-1 rounded-lg text-xs font-bold text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-1';
+                if (viewEmojis) viewEmojis.classList.remove('hidden');
+                if (viewStickers) viewStickers.classList.add('hidden');
+                renderChatEmojiCategory(activeEmojiCategory);
+            } else {
+                if (tabEmojis) tabEmojis.className = 'px-2.5 py-1 rounded-lg text-xs font-bold text-on-surface-variant hover:text-on-surface transition-all flex items-center gap-1';
+                if (tabStickers) tabStickers.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-white shadow-xs transition-all flex items-center gap-1';
+                if (viewEmojis) viewEmojis.classList.add('hidden');
+                if (viewStickers) viewStickers.classList.remove('hidden');
+                filterChatStickers(activeStickerCategory);
+            }
+        }
 
         function toggleChatEmojiPicker(forceState) {
             const popover = document.getElementById('chatEmojiPickerPopover');
@@ -14347,16 +14539,60 @@
             const shouldOpen = forceState !== undefined ? forceState : popover.classList.contains('hidden');
             if (shouldOpen) {
                 toggleChatGifPicker(false);
-                const grid = document.getElementById('chatEmojiGrid');
-                if (grid && !grid.hasChildNodes()) {
-                    grid.innerHTML = CHAT_EMOJIS.map(em => `
-                        <button type="button" onclick="insertChatEmoji('${em}')" class="p-1.5 hover:bg-surface-container rounded-lg transition-transform hover:scale-125 flex items-center justify-center">${em}</button>
-                    `).join('');
-                }
                 popover.classList.remove('hidden');
+                renderChatEmojiCategoryChips();
+                if (activeChatDrawerTab === 'emojis') {
+                    renderChatEmojiCategory(activeEmojiCategory);
+                } else {
+                    filterChatStickers(activeStickerCategory);
+                }
             } else {
                 popover.classList.add('hidden');
             }
+        }
+
+        function renderChatEmojiCategoryChips() {
+            const container = document.getElementById('chatEmojiCategoryChips');
+            if (!container) return;
+            container.innerHTML = CHAT_EMOJI_CATEGORIES.map(cat => {
+                const isActive = cat.id === activeEmojiCategory;
+                return `
+                    <button type="button" onclick="renderChatEmojiCategory('${cat.id}')" class="px-2 py-0.5 rounded-full text-[10px] font-bold transition-all shrink-0 ${isActive ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}">
+                        ${cat.name}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderChatEmojiCategory(catId) {
+            activeEmojiCategory = catId;
+            renderChatEmojiCategoryChips();
+            const grid = document.getElementById('chatEmojiGrid');
+            if (!grid) return;
+
+            const category = CHAT_EMOJI_CATEGORIES.find(c => c.id === catId) || CHAT_EMOJI_CATEGORIES[0];
+            grid.innerHTML = category.emojis.map(em => `
+                <button type="button" onclick="insertChatEmoji('${em}')" class="p-1.5 hover:bg-surface-container rounded-lg transition-transform hover:scale-125 flex items-center justify-center text-lg cursor-pointer" title="${em}">
+                    ${em}
+                </button>
+            `).join('');
+        }
+
+        function filterChatEmojis(query) {
+            const q = (query || '').toLowerCase().trim();
+            const grid = document.getElementById('chatEmojiGrid');
+            if (!grid) return;
+            if (!q) {
+                renderChatEmojiCategory(activeEmojiCategory);
+                return;
+            }
+
+            const allEmojis = Array.from(new Set(CHAT_EMOJI_CATEGORIES.flatMap(c => c.emojis)));
+            grid.innerHTML = allEmojis.map(em => `
+                <button type="button" onclick="insertChatEmoji('${em}')" class="p-1.5 hover:bg-surface-container rounded-lg transition-transform hover:scale-125 flex items-center justify-center text-lg cursor-pointer">
+                    ${em}
+                </button>
+            `).join('');
         }
 
         function insertChatEmoji(emoji) {
@@ -14365,7 +14601,64 @@
                 input.value = (input.value || '') + emoji;
                 input.focus();
             }
+        }
+
+        function filterChatStickers(category) {
+            activeStickerCategory = category || 'all';
+            const pills = document.querySelectorAll('#chatStickerCategoryPills .sticker-cat-pill');
+            pills.forEach(pill => {
+                const isMatch = (pill.innerText.toLowerCase() === activeStickerCategory) || (activeStickerCategory === 'all' && pill.innerText.toLowerCase() === 'all');
+                pill.className = `sticker-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold ${isMatch ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`;
+            });
+
+            const grid = document.getElementById('chatStickersGrid');
+            if (!grid) return;
+
+            const filtered = activeStickerCategory === 'all'
+                ? CHAT_STICKER_LIBRARY
+                : CHAT_STICKER_LIBRARY.filter(s => s.category === activeStickerCategory);
+
+            grid.innerHTML = filtered.map(s => `
+                <button type="button" onclick="sendChatSticker('${escapeChatHtml(s.text)}')" class="px-2.5 py-1.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer ${s.bg}" title="Send '${s.label}'">
+                    <span class="material-symbols-outlined text-[15px]">${s.icon}</span>
+                    <span>${escapeChatHtml(s.text)}</span>
+                </button>
+            `).join('');
+        }
+
+        async function sendChatSticker(stickerText) {
+            if (!currentActiveConversationId || !currentUser) {
+                showToast('Please open an active conversation first.', 'info');
+                return;
+            }
             toggleChatEmojiPicker(false);
+
+            try {
+                const res = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
+                    method: 'POST',
+                    headers: getChatHeaders(),
+                    body: JSON.stringify({
+                        message: stickerText,
+                        message_type: 'sticker'
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    if (res.status === 404 || res.status === 403) {
+                        showToast(err.error || 'Conversation unavailable. Refreshing...', 'error');
+                        currentActiveConversationId = null;
+                        await loadChatConversations();
+                    } else {
+                        showToast(err.error || 'Failed to send sticker', 'error');
+                    }
+                    return;
+                }
+                await loadActiveConversationMessages(currentActiveConversationId);
+                loadChatConversations();
+            } catch (err) {
+                console.error('Error sending sticker:', err);
+                showToast('Failed to send sticker', 'error');
+            }
         }
 
         function toggleChatGifPicker(forceState) {
@@ -14374,59 +14667,66 @@
             const shouldOpen = forceState !== undefined ? forceState : popover.classList.contains('hidden');
             if (shouldOpen) {
                 toggleChatEmojiPicker(false);
-                const grid = document.getElementById('chatGifsGrid');
-                if (grid && !grid.hasChildNodes()) {
-                    grid.innerHTML = CHAT_GIFS.map(g => `
-                        <div onclick="sendChatMediaDirect('${g.url}', 'gif')" class="cursor-pointer rounded-xl overflow-hidden border border-outline-variant hover:border-primary transition-all hover:scale-[1.02]">
-                            <img src="${g.url}" alt="${g.title}" class="w-full h-24 object-cover"/>
-                            <div class="p-1 bg-surface-container text-center text-[10px] font-bold text-on-surface truncate">${g.title}</div>
-                        </div>
-                    `).join('');
-                }
                 popover.classList.remove('hidden');
+                filterChatGifsByCategory(activeGifCategory);
             } else {
                 popover.classList.add('hidden');
             }
         }
 
-        async function sendChatSticker(stickerText) {
-            if (!currentActiveConversationId || !currentUser) return;
-            toggleChatEmojiPicker(false);
+        function filterChatGifsByCategory(category) {
+            activeGifCategory = category || 'all';
+            const pills = document.querySelectorAll('#chatGifCategoryPills .gif-cat-pill');
+            pills.forEach(pill => {
+                const text = pill.innerText.toLowerCase();
+                const isMatch = (activeGifCategory === 'all' && text.includes('all')) ||
+                                (activeGifCategory !== 'all' && text.includes(activeGifCategory));
+                pill.className = `gif-cat-pill px-2 py-0.5 rounded-full text-[10px] font-bold ${isMatch ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`;
+            });
 
-            try {
-                const res = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-user-id': String(currentUser.id)
-                    },
-                    body: JSON.stringify({
-                        message: stickerText,
-                        message_type: 'sticker'
-                    })
-                });
-                if (!res.ok) {
-                    showToast('Failed to send sticker', 'error');
-                    return;
-                }
-                await loadActiveConversationMessages(currentActiveConversationId);
-                loadChatConversations();
-            } catch (err) {
-                console.error('Error sending sticker:', err);
+            const searchInput = document.getElementById('chatGifSearchInput');
+            filterChatGifs(searchInput ? searchInput.value : '');
+        }
+
+        function filterChatGifs(query) {
+            const q = (query || '').toLowerCase().trim();
+            const grid = document.getElementById('chatGifsGrid');
+            if (!grid) return;
+
+            let items = CHAT_GIF_LIBRARY;
+            if (activeGifCategory && activeGifCategory !== 'all') {
+                items = items.filter(g => g.category === activeGifCategory);
             }
+            if (q) {
+                items = items.filter(g => g.title.toLowerCase().includes(q) || g.keywords.toLowerCase().includes(q));
+            }
+
+            if (items.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 p-6 text-center text-xs text-on-surface-variant">No GIFs found for "${escapeChatHtml(q)}"</div>`;
+                return;
+            }
+
+            grid.innerHTML = items.map(g => `
+                <div onclick="sendChatMediaDirect('${g.url}', 'gif')" class="group relative cursor-pointer rounded-xl overflow-hidden border border-outline-variant hover:border-primary transition-all hover:scale-[1.02] shadow-xs bg-surface-container">
+                    <img src="${g.url}" alt="${escapeChatHtml(g.title)}" class="w-full h-24 object-cover" loading="lazy"/>
+                    <div class="absolute inset-x-0 bottom-0 p-1 bg-black/60 backdrop-blur-xs text-center text-[10px] font-bold text-white truncate group-hover:bg-primary transition-colors">
+                        ${escapeChatHtml(g.title)}
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function sendChatMediaDirect(mediaUrl, messageType = 'gif') {
-            if (!currentActiveConversationId || !currentUser) return;
+            if (!currentActiveConversationId || !currentUser) {
+                showToast('Please open an active conversation first.', 'info');
+                return;
+            }
             toggleChatGifPicker(false);
 
             try {
                 const res = await fetch(`${API}/chat/conversations/${currentActiveConversationId}/messages`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-user-id': String(currentUser.id)
-                    },
+                    headers: getChatHeaders(),
                     body: JSON.stringify({
                         message: '',
                         message_type: messageType,
@@ -14434,13 +14734,21 @@
                     })
                 });
                 if (!res.ok) {
-                    showToast('Failed to send media', 'error');
+                    const err = await res.json().catch(() => ({}));
+                    if (res.status === 404 || res.status === 403) {
+                        showToast(err.error || 'Conversation unavailable. Refreshing...', 'error');
+                        currentActiveConversationId = null;
+                        await loadChatConversations();
+                    } else {
+                        showToast(err.error || 'Failed to send media', 'error');
+                    }
                     return;
                 }
                 await loadActiveConversationMessages(currentActiveConversationId);
                 loadChatConversations();
             } catch (err) {
                 console.error('Error sending media:', err);
+                showToast('Failed to send media', 'error');
             }
         }
         // -------------------------------------------------------------

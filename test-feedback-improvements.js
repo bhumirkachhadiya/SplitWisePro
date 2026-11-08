@@ -238,6 +238,46 @@ async function runFeedbackImprovementsTests() {
         });
         assert(sendStickerRes.ok, 'Sent sticker chat message');
 
+        // Send Emoji message
+        const sendEmojiRes = await fetch(`${API}/chat/conversations/${convId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${charlieToken}`,
+                'Content-Type': 'application/json',
+                'x-user-id': String(charlieId)
+            },
+            body: JSON.stringify({
+                message: '😍🔥💸',
+                message_type: 'emoji'
+            })
+        });
+        assert(sendEmojiRes.ok, 'Sent emoji chat message');
+
+        // Test non-existent conversation returns 404 (not 403)
+        const nonExistentRes = await fetch(`${API}/chat/conversations/999999/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${charlieToken}`,
+                'Content-Type': 'application/json',
+                'x-user-id': String(charlieId)
+            },
+            body: JSON.stringify({ message: 'Hello' })
+        });
+        assert(nonExistentRes.status === 404, 'Non-existent conversation returns 404');
+
+        // Test auto-heal: remove Karan from chat_conversation_members but keep in group_members
+        await pool.query('DELETE FROM chat_conversation_members WHERE conversation_id = $1 AND user_id = $2', [convId, karanId]);
+        const autoHealRes = await fetch(`${API}/chat/conversations/${convId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${karanToken}`,
+                'Content-Type': 'application/json',
+                'x-user-id': String(karanId)
+            },
+            body: JSON.stringify({ message: 'Auto-healed message from circle member!' })
+        });
+        assert(autoHealRes.ok, 'Circle member auto-healed into conversation and message sent successfully');
+
         // Upload attachment
         const sampleFileData = 'data:text/plain;base64,' + Buffer.from('Dummy receipt invoice file content').toString('base64');
         const attachRes = await fetch(`${API}/chat/conversations/${convId}/attachment`, {
