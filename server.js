@@ -2645,28 +2645,55 @@ app.get('/api/groups/:id/expenses', async (req, res) => {
 
         const expIds = expensesRes.rows.map(e => e.id);
         const splitsByExpense = new Map();
+        const payersByExpense = new Map();
         if (expIds.length > 0) {
-            const allSplits = await pool.query(`
-                SELECT es.*, u.name as user_name, u.name as name, u.email as user_email, u.avatar_initials, u.upi_id
-                FROM expense_splits es
-                JOIN users u ON es.user_id = u.id
-                WHERE es.expense_id = ANY($1::int[])
-                ORDER BY u.name ASC
-            `, [expIds]);
+            const [allSplits, allPayers] = await Promise.all([
+                pool.query(`
+                    SELECT es.*, u.name as user_name, u.name as name, u.email as user_email, u.avatar_initials, u.upi_id
+                    FROM expense_splits es
+                    JOIN users u ON es.user_id = u.id
+                    WHERE es.expense_id = ANY($1::int[])
+                    ORDER BY u.name ASC
+                `, [expIds]),
+                pool.query(`
+                    SELECT ep.*, u.name as user_name, u.avatar_initials, u.upi_id
+                    FROM expense_payers ep
+                    JOIN users u ON ep.user_id = u.id
+                    WHERE ep.expense_id = ANY($1::int[])
+                    ORDER BY ep.amount DESC
+                `, [expIds])
+            ]);
             allSplits.rows.forEach(row => {
                 if (!splitsByExpense.has(row.expense_id)) splitsByExpense.set(row.expense_id, []);
                 splitsByExpense.get(row.expense_id).push(row);
             });
+            allPayers.rows.forEach(row => {
+                if (!payersByExpense.has(row.expense_id)) payersByExpense.set(row.expense_id, []);
+                payersByExpense.get(row.expense_id).push({ ...row, amount: parseFloat(row.amount) });
+            });
         }
 
         const expenses = expensesRes.rows.map(exp => {
+            const payers = payersByExpense.get(exp.id) || (exp.paid_by ? [{
+                user_id: exp.paid_by,
+                amount: parseFloat(exp.amount),
+                user_name: exp.paid_by_name || 'User',
+                avatar_initials: exp.paid_by_initials || 'U'
+            }] : []);
+            const isMultiPayer = payers.length > 1;
+            const payerMap = new Map();
+            payers.forEach(p => payerMap.set(parseInt(p.user_id), parseFloat(p.amount)));
+
+            const paidByDisplay = isMultiPayer
+                ? payers.map(p => `${p.user_name} (₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })})`).join(', ')
+                : (exp.paid_by_name || 'User');
+
             const splits = (splitsByExpense.get(exp.id) || []).map(s => {
-                const isPayer = parseInt(s.user_id) === parseInt(exp.paid_by);
+                const sUserId = parseInt(s.user_id);
+                const contributedAmt = payerMap.get(sUserId) || (sUserId === parseInt(exp.paid_by) && !isMultiPayer ? parseFloat(exp.amount) : 0);
+                const isPayer = contributedAmt > 0 || sUserId === parseInt(exp.paid_by);
                 const amount = parseFloat(s.amount || 0);
                 const settledForSplit = roundMoney(s.settled_amount || 0);
-                // The payer's own share is considered covered by the payment they
-                // made — but it must be counted once, never added on top of a
-                // historical settled_amount.
                 const paidAmountForSplit = isPayer ? roundMoney(amount) : settledForSplit;
                 const outstanding = isPayer ? 0 : Math.max(0, roundMoney(amount - settledForSplit));
                 const status = (isPayer || outstanding <= 0.005)
@@ -2677,6 +2704,8 @@ app.get('/api/groups/:id/expenses', async (req, res) => {
                     name: s.name || s.user_name || 'Member',
                     user_name: s.user_name || s.name || 'Member',
                     amount,
+                    contributed_amount: roundMoney(contributedAmt),
+                    is_contributor: contributedAmt > 0,
                     paid_amount: paidAmountForSplit,
                     outstanding_amount: outstanding,
                     is_locked: s.is_locked === true,
@@ -2689,7 +2718,7 @@ app.get('/api/groups/:id/expenses', async (req, res) => {
             const paidAmount = splits.reduce((acc, s) => acc + s.paid_amount, 0);
             const baseTotal = roundMoney(exp.converted_amount || exp.amount);
             const basePending = splits.reduce((acc, s) => {
-                const isPayer = parseInt(s.user_id) === parseInt(exp.paid_by);
+                const isPayer = parseInt(s.user_id) === parseInt(exp.paid_by) || (payerMap.get(parseInt(s.user_id)) || 0) > 0;
                 if (isPayer) return acc;
                 return acc + Math.max(0, roundMoney(parseFloat(s.base_amount || 0) - parseFloat(s.settled_amount_base || 0)));
             }, 0);
@@ -2699,6 +2728,9 @@ app.get('/api/groups/:id/expenses', async (req, res) => {
                 title: exp.description || exp.title || 'Expense',
                 payer_name: exp.paid_by_name || 'User',
                 paid_by_name: exp.paid_by_name || 'User',
+                paid_by_display: paidByDisplay,
+                is_multi_payer: isMultiPayer,
+                payers,
                 amount: parseFloat(exp.amount || 0),
                 base_amount: baseTotal,
                 paid_amount: roundMoney(paidAmount),

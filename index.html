@@ -8322,7 +8322,11 @@
                                 <div class="text-[11px] text-on-surface-variant mt-0.5">
                                     <span>${new Date(exp.expense_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                                     <span>•</span>
-                                    <span>Paid by <strong>${isPaidByMe ? 'You' : (exp.paid_by_name || 'User')}</strong></span>
+                                    ${(exp.is_multi_payer || (exp.payers && exp.payers.length > 1)) ? `
+                                        <span>Paid by <strong>${exp.payers.map(p => (p.user_name || p.name) + ' (₹' + parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 0 }) + ')').join(', ')}</strong></span>
+                                    ` : `
+                                        <span>Paid by <strong>${isPaidByMe ? 'You' : (exp.paid_by_name || 'User')}</strong></span>
+                                    `}
                                     ${mySplit ? `<span>•</span><span>Your share: ₹${myShareAmount.toLocaleString('en-IN')}</span>` : ''}
                                 </div>
                             </div>
@@ -8445,10 +8449,24 @@
                                     <span class="px-2 py-0.5 rounded text-[10px] sm:text-[11px] bg-surface-container text-on-surface-variant font-medium">${exp.category}</span>
                                     ${isProtected ? '<span class="px-2 py-0.5 rounded text-[10px] sm:text-[11px] bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold border border-amber-500/20 flex items-center gap-1" title="Protected: Settled splits cannot be deleted"><span class="material-symbols-outlined text-[12px]">lock</span> Protected</span>' : ''}
                                 </div>
-                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[11px] sm:text-xs text-on-surface-variant">
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[11px] sm:text-xs text-on-surface-variant">
                                     <span>${new Date(exp.expense_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                     <span>•</span>
-                                    <span>Paid by <strong class="text-on-surface">${isPaidByMe ? 'You' : (exp.paid_by_name || 'User')}</strong></span>
+                                    ${(exp.is_multi_payer || (exp.payers && exp.payers.length > 1)) ? `
+                                        <span class="inline-flex items-center gap-1.5 flex-wrap">
+                                            <span class="font-bold text-on-surface">Paid by:</span>
+                                            ${exp.payers.map(p => {
+                                                const isP = currentUser && Number(currentUser.id) === Number(p.user_id);
+                                                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary font-bold text-[10px] sm:text-[11px] border border-primary/20">
+                                                    <span class="material-symbols-outlined text-[11px]">payments</span>
+                                                    <span>${escapeChatHtml(p.user_name || p.name || 'Member')}${isP ? ' (You)' : ''}:</span>
+                                                    <span class="font-mono font-extrabold">₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
+                                                </span>`;
+                                            }).join(' ')}
+                                        </span>
+                                    ` : `
+                                        <span>Paid by <strong class="text-on-surface">${isPaidByMe ? 'You' : (exp.paid_by_name || 'User')}</strong></span>
+                                    `}
                                     <span>•</span>
                                     <span>${(exp.splits || []).length} members</span>
                                 </div>
@@ -10117,9 +10135,28 @@
                                             '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Pending Splits</span>'
                                         }
                                     </div>
-                                    <p class="text-[11px] text-on-surface-variant mt-0.5">
-                                        Date: <span class="font-mono text-on-surface">${dateFormatted}</span> • Paid by <strong class="text-on-surface">${escapeChatHtml(payerName)}</strong> ${isPayerMe ? '<span class="text-primary font-bold">(You)</span>' : ''}
-                                    </p>
+                                    ${(exp.is_multi_payer || (exp.payers && exp.payers.length > 1)) ? `
+                                        <div class="flex items-center gap-1.5 flex-wrap mt-1 text-[11px]">
+                                            <span class="text-on-surface-variant font-mono">Date: ${dateFormatted}</span>
+                                            <span class="text-on-surface-variant">•</span>
+                                            <span class="font-bold text-on-surface-variant flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[13px] text-primary">groups</span>
+                                                <span>Paid by:</span>
+                                            </span>
+                                            ${exp.payers.map(p => {
+                                                const isThisPayerMe = currentUser && Number(currentUser.id) === Number(p.user_id);
+                                                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary font-bold text-[10px] sm:text-[11px] border border-primary/20">
+                                                    <span class="material-symbols-outlined text-[12px]">payments</span>
+                                                    <span>${escapeChatHtml(p.user_name || p.name || 'Member')}${isThisPayerMe ? ' (You)' : ''}:</span>
+                                                    <span class="font-mono font-extrabold">₹${parseFloat(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                </span>`;
+                                            }).join(' ')}
+                                        </div>
+                                    ` : `
+                                        <p class="text-[11px] text-on-surface-variant mt-0.5">
+                                            Date: <span class="font-mono text-on-surface">${dateFormatted}</span> • Paid by <strong class="text-on-surface">${escapeChatHtml(payerName)}</strong> ${isPayerMe ? '<span class="text-primary font-bold">(You)</span>' : ''}
+                                        </p>
+                                    `}
                                 </div>
                                 <div class="text-left sm:text-right">
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block">Total Expense</span>
@@ -10142,6 +10179,7 @@
                                         ${(exp.splits || []).map(s => {
                                             const memberName = s.name || s.user_name || 'Member';
                                             const isMemberPayer = Number(s.user_id) === Number(exp.paid_by);
+                                            const payerObj = (exp.payers || []).find(p => Number(p.user_id) === Number(s.user_id));
                                             const isPending = !s.is_settled;
                                             const splitAmt = parseFloat(s.amount || 0);
                                             const lockBadge = s.is_locked ? 
@@ -10152,7 +10190,17 @@
                                                 <tr class="hover:bg-surface-container-high/30 transition-colors">
                                                     <td class="py-2 text-on-surface font-medium flex items-center gap-1.5 flex-wrap">
                                                         <span>${escapeChatHtml(memberName)}</span>
-                                                        ${isMemberPayer ? '<span class="text-[9px] px-1 py-0.2 rounded bg-primary/10 text-primary font-bold">Payer</span>' : ''}
+                                                        ${(() => {
+                                                            if (payerObj && (exp.is_multi_payer || (exp.payers && exp.payers.length > 1))) {
+                                                                return `<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/25 flex items-center gap-0.5" title="Contributed ₹${parseFloat(payerObj.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}">
+                                                                    <span class="material-symbols-outlined text-[10px]">payments</span> Paid ₹${parseFloat(payerObj.amount).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                                                                </span>`;
+                                                            }
+                                                            if (isMemberPayer) {
+                                                                return '<span class="text-[9px] px-1.5 py-0.2 rounded bg-primary/10 text-primary font-bold">Payer</span>';
+                                                            }
+                                                            return '';
+                                                        })()}
                                                         ${lockBadge}
                                                     </td>
                                                     <td class="py-2 text-right font-mono font-bold text-on-surface tabular-nums">
