@@ -3381,7 +3381,7 @@ app.post('/api/expenses', async (req, res) => {
                     emailService.sendExpenseAddedEmail({
                         to: row.email,
                         recipientName: row.name,
-                        payerName,
+                        payerName: payerDisplay,
                         expenseTitle: expDesc,
                         groupName,
                         shareAmount: row.amount,
