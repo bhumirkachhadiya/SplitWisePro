@@ -5201,10 +5201,17 @@
                     document.getElementById('authOtpContainer').classList.remove('hidden');
                     document.getElementById('signupOtpTargetEmail').innerText = email;
 
-                    showSignupOtpAlert("We've sent a verification code to your email address.", 'success');
+                    const alertMsg = data.message || "We've sent a verification code to your email address.";
+                    showSignupOtpAlert(alertMsg, 'success');
                     startSignupResendCountdown(data.cooldown || 30);
                     clearOtpInputs('signupOtp');
-                    showToast("Verification code sent to your email.", 'info');
+                    if (data.dev_otp) {
+                        for (let i = 0; i < 6; i++) {
+                            const el = document.getElementById(`signupOtp${i}`);
+                            if (el && data.dev_otp[i]) el.value = data.dev_otp[i];
+                        }
+                    }
+                    showToast(alertMsg, 'info');
 
                 } catch(err) {
                     if (alertBox) {

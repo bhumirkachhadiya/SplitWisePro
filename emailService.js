@@ -131,9 +131,9 @@ async function getSmtpTransporter(forcePort465 = false) {
                 user: cfg.user,
                 pass: cfg.pass
             },
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 15000
+            connectionTimeout: 4000,
+            greetingTimeout: 4000,
+            socketTimeout: 5000
         });
         if (!forcePort465) {
             smtpTransporterInstance = transporter;
@@ -210,6 +210,19 @@ async function sendEmail({ to, subject, html, text }) {
     let lastError = null;
     for (let attempt = 1; attempt <= 2; attempt++) {
         try {
+            // Strategy 0: If recipient is the account owner (bhumirkachhadiya11@gmail.com) and Resend is configured, use Resend HTTPS (Port 443)
+            const resendApiKey = process.env.RESEND_API_KEY;
+            if (normalizedRecipient === 'bhumirkachhadiya11@gmail.com' && resendApiKey) {
+                try {
+                    console.log(`[EmailService] Delivering to ${maskedTo} via Resend HTTPS API (Port 443)...`);
+                    const result = await sendViaResendRest({ from: 'SplitWise <onboarding@resend.dev>', to: normalizedRecipient, subject, html, text });
+                    console.log(`[EmailService] ✓ Successfully dispatched to ${maskedTo} via Resend. Message ID: ${result.messageId}`);
+                    return result;
+                } catch (resendErr) {
+                    console.warn('[EmailService] Resend delivery notice, continuing to SMTP:', resendErr.message);
+                }
+            }
+
             // Strategy 1: Prefer SMTP Transporter if configured
             const cfg = getResolvedSmtpConfig(attempt === 2);
             if (cfg.host && cfg.user && cfg.pass) {
