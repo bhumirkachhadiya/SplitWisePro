@@ -4994,34 +4994,47 @@
         // -------------------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
             const hasToken = !!(window.__splitwiseGetToken && window.__splitwiseGetToken());
-            const storedUser = sessionStorage.getItem('splitease_user');
 
-            if (storedUser && hasToken) {
-                try {
-                    currentUser = JSON.parse(storedUser);
-                    window.currentUser = currentUser;
-                    launchApp();
-                } catch(e) {
-                    sessionStorage.removeItem('splitease_user');
-                }
+            if (hasToken) {
+                // Verify the session token with the backend before launching the app
+                fetch(`${API}/auth/session`)
+                    .then(r => {
+                        if (!r.ok) throw new Error('Session invalid');
+                        return r.json();
+                    })
+                    .then(d => {
+                        if (d && d.user) {
+                            currentUser = d.user;
+                            window.currentUser = currentUser;
+                            sessionStorage.setItem('splitease_user', JSON.stringify(currentUser));
+                            localStorage.setItem('splitease_user', JSON.stringify(currentUser));
+                            launchApp();
+                        } else {
+                            throw new Error('Invalid session response');
+                        }
+                    })
+                    .catch(() => {
+                        // Stale or revoked session token: clear storage and show clean login
+                        if (window.__splitwiseClearSession) window.__splitwiseClearSession();
+                        sessionStorage.removeItem('splitease_user');
+                        localStorage.removeItem('splitease_user');
+                        currentUser = null;
+                        window.currentUser = null;
+                        const ws = document.getElementById('appWorkspace');
+                        if (ws) ws.classList.add('hidden');
+                        const auth = document.getElementById('authScreen');
+                        if (auth) auth.classList.remove('hidden');
+                    });
             } else {
-                // A user object without a session token is stale state, never a
-                // valid login. Clear it and show the auth screen.
-                if (storedUser) sessionStorage.removeItem('splitease_user');
-                if (hasToken) {
-                    // Verify the token with the backend before restoring the UI.
-                    fetch(`${API}/auth/session`)
-                        .then(r => r.ok ? r.json() : null)
-                        .then(d => {
-                            if (d && d.user) {
-                                currentUser = d.user;
-                                window.currentUser = currentUser;
-                                sessionStorage.setItem('splitease_user', JSON.stringify(currentUser));
-                                launchApp();
-                            }
-                        })
-                        .catch(() => {});
-                }
+                if (window.__splitwiseClearSession) window.__splitwiseClearSession();
+                sessionStorage.removeItem('splitease_user');
+                localStorage.removeItem('splitease_user');
+                currentUser = null;
+                window.currentUser = null;
+                const ws = document.getElementById('appWorkspace');
+                if (ws) ws.classList.add('hidden');
+                const auth = document.getElementById('authScreen');
+                if (auth) auth.classList.remove('hidden');
             }
 
             window.addEventListener('keydown', (e) => {
@@ -9992,8 +10005,15 @@
 
         function startPaymentRequestPolling() {
             if (paymentRequestPollTimer) return;
+            const token = window.__splitwiseGetToken ? window.__splitwiseGetToken() : '';
+            if (!currentUser || !token) return;
             paymentRequestPollTimer = setInterval(() => {
-                if (currentUser && document.visibilityState === 'visible') loadPaymentRequests();
+                const t = window.__splitwiseGetToken ? window.__splitwiseGetToken() : '';
+                if (currentUser && t && document.visibilityState === 'visible') {
+                    loadPaymentRequests();
+                } else if (!t || !currentUser) {
+                    stopPaymentRequestPolling();
+                }
             }, 30000);
         }
 
@@ -10139,11 +10159,19 @@
 
         async function loadPaymentRequests() {
             const list = document.getElementById('paymentRequestsList');
-            if (!list || !currentUser) return;
+            const token = window.__splitwiseGetToken ? window.__splitwiseGetToken() : '';
+            if (!currentUser || !token) {
+                if (typeof stopPaymentRequestPolling === 'function') stopPaymentRequestPolling();
+                return;
+            }
             try {
                 const res = await fetch(`${API}/payment-requests`);
+                if (res.status === 401) {
+                    if (typeof stopPaymentRequestPolling === 'function') stopPaymentRequestPolling();
+                    return;
+                }
                 if (!res.ok) {
-                    list.innerHTML = '<div class="p-5 text-center text-xs text-error font-semibold">Could not load payment requests.</div>';
+                    if (list) list.innerHTML = '<div class="p-5 text-center text-xs text-error font-semibold">Could not load payment requests.</div>';
                     return;
                 }
                 const data = await res.json();
